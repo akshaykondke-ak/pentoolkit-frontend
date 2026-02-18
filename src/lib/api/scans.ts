@@ -1,3 +1,5 @@
+// src/lib/api/scans.tsx
+
 import apiClient from './client';
 
 export interface Scan {
