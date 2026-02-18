@@ -1,5 +1,4 @@
 // // src/app/dashboard/page.tsx
-
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -131,30 +130,50 @@ export default function DashboardPage() {
     <div className="p-6 space-y-5" style={mono}>
 
       {/* ── Header ──────────────────────────────── */}
-      <div className="flex items-start justify-between">
+      <div className="rounded-sm px-6 py-5 flex items-start justify-between"
+        style={{
+          backgroundColor: 'var(--bg-card)',
+          border: '1px solid var(--border-default)',
+        }}>
         <div>
-          <div className="flex items-center gap-2 mb-1">
+          <div className="flex items-center gap-2 mb-2">
             <span className="text-xs" style={{ color: 'var(--accent)' }}>$</span>
             <span className="text-xs tracking-wider" style={{ color: 'var(--text-faint)' }}>dashboard --overview</span>
           </div>
-          <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>
+          <h1 className="text-2xl font-bold leading-tight" style={{ color: 'var(--text-primary)' }}>
             Welcome back,{' '}
             <span style={{ color: 'var(--accent)' }}>{user?.full_name ?? data?.user.full_name}</span>
           </h1>
-          <p className="text-xs mt-1 flex items-center gap-2" style={{ color: 'var(--text-faint)' }}>
+          <p className="text-xs mt-2 flex items-center gap-2" style={{ color: 'var(--text-muted)' }}>
             {scans?.active_scans
               ? <span style={{ color: 'var(--warn)' }}>⬤ {scans.active_scans} scan{scans.active_scans > 1 ? 's' : ''} running</span>
-              : <span>No active scans</span>}
+              : <span style={{ color: 'var(--text-faint)' }}>No active scans</span>}
             <span style={{ color: 'var(--border-strong)' }}>|</span>
             <span>{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}</span>
           </p>
         </div>
-        {error && (
-          <div className="text-xs px-3 py-2 rounded-sm"
-            style={{ border: '1px solid var(--danger-border)', backgroundColor: 'var(--danger-dim)', color: 'var(--danger)' }}>
-            {error}
+        <div className="flex flex-col items-end gap-2">
+          {error && (
+            <div className="text-xs px-3 py-2 rounded-sm"
+              style={{ border: '1px solid var(--danger-border)', backgroundColor: 'var(--danger-dim)', color: 'var(--danger)' }}>
+              {error}
+            </div>
+          )}
+          {/* Mini scan summary pills */}
+          <div className="flex items-center gap-2 mt-1">
+            {[
+              { label: 'Total',  value: scans?.total_scans ?? 0,     color: 'var(--text-secondary)' },
+              { label: 'Active', value: scans?.active_scans ?? 0,    color: 'var(--warn)'           },
+              { label: 'Failed', value: scans?.failed_scans ?? 0,    color: 'var(--danger)'         },
+            ].map(({ label, value, color }) => (
+              <div key={label} className="text-center px-3 py-1 rounded-sm"
+                style={{ backgroundColor: 'var(--bg-hover)', border: '1px solid var(--border-subtle)' }}>
+                <div className="text-sm font-bold" style={{ color }}>{value}</div>
+                <div className="text-[10px]" style={{ color: 'var(--text-faint)' }}>{label}</div>
+              </div>
+            ))}
           </div>
-        )}
+        </div>
       </div>
 
       {/* ── Stat Cards ──────────────────────────── */}

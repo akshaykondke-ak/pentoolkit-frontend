@@ -86,3 +86,10 @@
   --grid-line: rgba(0, 136, 68, 0.04);
   --card-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.04);
 }
+
+/* ── Apply base bg to html/body ───────────────────────── */
+html, body {
+  background-color: var(--bg-base);
+  color: var(--text-primary);
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
