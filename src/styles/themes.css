@@ -1,0 +1,88 @@
+/* src/styles/themes.css */
+/* 
+  Theme system for Pentoolkit
+  All components should use these CSS variables instead of hardcoded colors.
+  Toggle .theme-light on <html> or <body> to switch themes.
+*/
+
+/* ── DARK THEME (default) ─────────────────────────────── */
+:root {
+  --bg-base:        #0a0a0a;
+  --bg-card:        #0d0d0d;
+  --bg-hover:       #111111;
+  --bg-input:       #111111;
+
+  --border-default: #1a1a1a;
+  --border-subtle:  #141414;
+  --border-strong:  #2a2a2a;
+
+  --text-primary:   #e0e0e0;
+  --text-secondary: #888888;
+  --text-muted:     #555555;
+  --text-faint:     #333333;
+  --text-ghost:     #2a2a2a;
+
+  --accent:         #00ff88;
+  --accent-dim:     rgba(0, 255, 136, 0.1);
+  --accent-border:  rgba(0, 255, 136, 0.3);
+  --accent-glow:    rgba(0, 255, 136, 0.04);
+
+  --danger:         #ff4444;
+  --danger-dim:     rgba(255, 68, 68, 0.05);
+  --danger-border:  rgba(255, 68, 68, 0.2);
+
+  --warn:           #ffaa00;
+  --warn-dim:       rgba(255, 170, 0, 0.08);
+
+  --info:           #4488ff;
+
+  --severity-critical: #ff4444;
+  --severity-high:     #ff8800;
+  --severity-medium:   #ffaa00;
+  --severity-low:      #88cc00;
+  --severity-info:     #4488ff;
+
+  --grid-line: rgba(0, 255, 136, 0.03);
+  --card-shadow: 0 0 40px rgba(0, 255, 136, 0.04), inset 0 0 40px rgba(0,0,0,0.4);
+}
+
+/* ── LIGHT THEME ──────────────────────────────────────── */
+.theme-light {
+  --bg-base:        #f5f5f0;
+  --bg-card:        #ffffff;
+  --bg-hover:       #f9f9f7;
+  --bg-input:       #fafaf8;
+
+  --border-default: #e0e0d8;
+  --border-subtle:  #ebebea;
+  --border-strong:  #cccccc;
+
+  --text-primary:   #111111;
+  --text-secondary: #444444;
+  --text-muted:     #777777;
+  --text-faint:     #aaaaaa;
+  --text-ghost:     #cccccc;
+
+  --accent:         #008844;
+  --accent-dim:     rgba(0, 136, 68, 0.08);
+  --accent-border:  rgba(0, 136, 68, 0.25);
+  --accent-glow:    rgba(0, 136, 68, 0.03);
+
+  --danger:         #cc2222;
+  --danger-dim:     rgba(204, 34, 34, 0.05);
+  --danger-border:  rgba(204, 34, 34, 0.2);
+
+  --warn:           #cc7700;
+  --warn-dim:       rgba(204, 119, 0, 0.06);
+
+  --info:           #2255cc;
+
+  --severity-critical: #cc2222;
+  --severity-high:     #cc5500;
+  --severity-medium:   #cc7700;
+  --severity-low:      #558800;
+  --severity-info:     #2255cc;
+
+  --grid-line: rgba(0, 136, 68, 0.04);
+  --card-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.04);
+}

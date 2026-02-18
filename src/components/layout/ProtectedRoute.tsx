@@ -4,21 +4,20 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/store/authStore';
 
-export default function Home() {
+interface ProtectedRouteProps {
+  children: React.ReactNode;
+}
+
+export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   const router = useRouter();
   const { isAuthenticated } = useAuthStore();
 
   useEffect(() => {
-    if (isAuthenticated) {
-      router.push('/dashboard');
-    } else {
+    const sessionId = localStorage.getItem('session_id');
+    if (!sessionId && !isAuthenticated) {
       router.push('/auth/login');
     }
   }, [isAuthenticated, router]);
 
-  return (
-    <div className="flex items-center justify-center min-h-screen">
-      <p>Loading...</p>
-    </div>
-  );
+  return <>{children}</>;
 }
