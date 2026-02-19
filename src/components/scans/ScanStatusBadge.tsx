@@ -1,4 +1,5 @@
 // src/components/scans/ScanStatusBadge.tsx
+// src/components/scans/ScanStatusBadge.tsx
 'use client';
 import React from 'react';
 
@@ -8,11 +9,11 @@ interface Props {
 }
 
 const config: Record<string, { label: string; color: string; bg: string; border: string; dot: string }> = {
-  queued:    { label: 'Queued',    color: 'var(--text-muted)',   bg: 'var(--bg-hover)',    border: 'var(--border-default)', dot: 'var(--text-muted)'   },
-  running:   { label: 'Running',   color: 'var(--warn)',         bg: 'var(--warn-dim)',    border: 'rgba(255,170,0,0.25)',  dot: 'var(--warn)'         },
-  completed: { label: 'Complete',  color: 'var(--accent)',       bg: 'var(--accent-dim)',  border: 'var(--accent-border)', dot: 'var(--accent)'       },
-  failed:    { label: 'Failed',    color: 'var(--danger)',       bg: 'var(--danger-dim)',  border: 'var(--danger-border)', dot: 'var(--danger)'       },
-  cancelled: { label: 'Cancelled', color: 'var(--text-muted)',   bg: 'var(--bg-hover)',    border: 'var(--border-default)', dot: 'var(--text-muted)'  },
+  queued:    { label: 'Queued',    color: 'var(--text-muted)', bg: 'var(--bg-hover)',   border: 'var(--border-default)',  dot: 'var(--text-muted)'  },
+  running:   { label: 'Running',   color: 'var(--warn)',       bg: 'var(--warn-dim)',   border: 'rgba(255,170,0,0.25)',   dot: 'var(--warn)'        },
+  completed: { label: 'Complete',  color: 'var(--accent)',     bg: 'var(--accent-dim)', border: 'var(--accent-border)',   dot: 'var(--accent)'      },
+  failed:    { label: 'Failed',    color: 'var(--danger)',     bg: 'var(--danger-dim)', border: 'var(--danger-border)',   dot: 'var(--danger)'      },
+  cancelled: { label: 'Cancelled', color: 'var(--text-muted)', bg: 'var(--bg-hover)',   border: 'var(--border-default)',  dot: 'var(--text-muted)'  },
 };
 
 export default function ScanStatusBadge({ status, showSpinner = true }: Props) {
@@ -31,8 +32,15 @@ export default function ScanStatusBadge({ status, showSpinner = true }: Props) {
     >
       {isRunning && showSpinner ? (
         <span
-          className="w-2 h-2 rounded-full border border-t-transparent animate-spin flex-shrink-0"
-          style={{ borderColor: cfg.dot, borderTopColor: 'transparent' }}
+          className="w-2 h-2 rounded-full animate-spin flex-shrink-0"
+          style={{
+            // ← Fix: use individual border properties instead of mixing
+            // shorthand `border` + `borderTopColor`
+            borderWidth: '1px',
+            borderStyle: 'solid',
+            borderColor: cfg.dot,
+            borderTopColor: 'transparent',
+          }}
         />
       ) : (
         <span

@@ -305,7 +305,7 @@ export default function ReportsPage() {
                       {/* Target */}
                       <td className="px-5 py-4">
                         <p className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>{scan.target}</p>
-                        <p className="text-xs mt-0.5" style={{ color: 'var(--text-faint)' }}>...{scanId.slice(-14)}</p>
+                        {/* <p className="text-xs mt-0.5" style={{ color: 'var(--text-faint)' }}>...{scanId.slice(-14)}</p> */}
                       </td>
 
                       {/* Tools */}

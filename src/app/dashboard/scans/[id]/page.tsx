@@ -150,7 +150,7 @@ export default function ScanDetailPage() {
   }
 
   return (
-    <div className="p-6 space-y-5 max-w-5xl" style={mono}>
+    <div className="p-6 space-y-5 " style={mono}>
 
       {/* ── Back nav ─────────────────────────────── */}
       <Link
