@@ -5,104 +5,211 @@ import { Finding, extractCVE, formatDate } from '@/lib/api/findings';
 import FindingSeverityBadge from './FindingSeverityBadge';
 import FindingStatusBadge from './FindingStatusBadge';
 
+const mono: React.CSSProperties = { fontFamily: "'JetBrains Mono','Fira Code',monospace" };
+
 interface Props {
   finding: Finding;
   onClose: () => void;
   onStatusChange: (id: number, status: Finding['status']) => Promise<{ success: boolean; error?: string }>;
 }
 
-const STATUS_OPTIONS: Finding['status'][] = ['open', 'confirmed', 'false_positive', 'resolved'];
+const STATUS_OPTIONS: { value: Finding['status']; label: string }[] = [
+  { value: 'open',           label: 'Open'           },
+  { value: 'confirmed',      label: 'Confirmed'      },
+  { value: 'false_positive', label: 'False Positive' },
+  { value: 'resolved',       label: 'Resolved'       },
+];
+
+const STATUS_HOVER: Record<string, { color: string; bg: string; border: string }> = {
+  open:           { color: 'var(--warn)',       bg: 'var(--warn-dim)',    border: 'rgba(255,170,0,0.3)'   },
+  confirmed:      { color: 'var(--danger)',      bg: 'var(--danger-dim)', border: 'var(--danger-border)'  },
+  false_positive: { color: 'var(--text-muted)',  bg: 'var(--bg-hover)',   border: 'var(--border-default)' },
+  resolved:       { color: 'var(--accent)',      bg: 'var(--accent-dim)', border: 'var(--accent-border)'  },
+};
 
 export default function FindingDetailModal({ finding, onClose, onStatusChange }: Props) {
-  const [updating, setUpdating] = useState(false);
+  const [updating, setUpdating]         = useState(false);
   const [currentStatus, setCurrentStatus] = useState(finding.status);
-  const [statusError, setStatusError] = useState<string | null>(null);
+  const [statusError, setStatusError]   = useState<string | null>(null);
+  const [saveOk, setSaveOk]             = useState(false);
+
+  const cve  = extractCVE(finding.evidence);
+  const host = finding.scan_info?.target || null;
 
   const handleStatusChange = async (newStatus: Finding['status']) => {
     if (updating || currentStatus === newStatus) return;
     setUpdating(true);
     setStatusError(null);
+    setSaveOk(false);
     const result = await onStatusChange(finding.id, newStatus);
     if (result.success) {
       setCurrentStatus(newStatus);
+      setSaveOk(true);
+      setTimeout(() => setSaveOk(false), 2000);
     } else {
       setStatusError(result.error || 'Failed to update status');
     }
     setUpdating(false);
   };
 
-  const cve = extractCVE(finding.evidence);
-  const host = finding.scan_info?.target || null;
-
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ backgroundColor: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(4px)' }}
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+        className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-sm"
+        style={{
+          ...mono,
+          backgroundColor: 'var(--bg-card)',
+          border: '1px solid var(--border-default)',
+          boxShadow: '0 32px 80px rgba(0,0,0,0.5)',
+        }}
         onClick={e => e.stopPropagation()}
       >
-        {/* Header */}
-        <div className="flex items-start justify-between p-6 border-b border-gray-200">
-          <div className="flex-1 pr-4">
-            <div className="flex items-center gap-2 mb-2">
+
+        {/* ── Header ──────────────────────────────── */}
+        <div
+          className="px-6 py-5 flex items-start justify-between gap-4"
+          style={{ borderBottom: '1px solid var(--border-default)' }}
+        >
+          <div className="flex-1 min-w-0">
+            {/* Terminal breadcrumb */}
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-xs" style={{ color: 'var(--accent)' }}>$</span>
+              <span className="text-xs tracking-wider" style={{ color: 'var(--text-faint)' }}>
+                findings --detail
+              </span>
+            </div>
+
+            {/* Badges row */}
+            <div className="flex flex-wrap items-center gap-2 mb-3">
               <FindingSeverityBadge severity={finding.severity} />
-              <FindingStatusBadge status={currentStatus} />
+              <FindingStatusBadge   status={currentStatus} />
+              {cve && (
+                <span
+                  className="px-2.5 py-1 rounded-sm text-xs"
+                  style={{
+                    color: 'var(--severity-info)',
+                    backgroundColor: 'rgba(68,136,255,0.08)',
+                    border: '1px solid rgba(68,136,255,0.2)',
+                  }}
+                >
+                  {cve}
+                </span>
+              )}
               {finding.is_false_positive && (
-                <span className="px-2 py-0.5 text-xs bg-gray-100 text-gray-500 border border-gray-200 rounded-full">
+                <span
+                  className="px-2.5 py-1 rounded-sm text-xs"
+                  style={{
+                    color: 'var(--text-muted)',
+                    backgroundColor: 'var(--bg-hover)',
+                    border: '1px solid var(--border-default)',
+                  }}
+                >
                   False Positive
                 </span>
               )}
             </div>
-            <h2 className="text-lg font-semibold text-gray-900">{finding.title}</h2>
-            <p className="text-sm text-gray-500 mt-1 flex items-center gap-2">
-              {host && <span className="font-mono">{host}</span>}
-              {host && <span>·</span>}
-              <span>{finding.tool}</span>
-            </p>
+
+            {/* Title */}
+            <h2 className="text-lg font-bold leading-snug" style={{ color: 'var(--text-primary)' }}>
+              {finding.title}
+            </h2>
+
+            {/* Sub-line: host · tool */}
+            {(host || finding.tool) && (
+              <p className="text-xs mt-1.5 flex items-center gap-2" style={{ color: 'var(--text-muted)' }}>
+                {host && <span>{host}</span>}
+                {host && finding.tool && <span style={{ color: 'var(--border-strong)' }}>·</span>}
+                {finding.tool && <span>{finding.tool}</span>}
+              </p>
+            )}
           </div>
+
+          {/* Close */}
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 text-2xl leading-none w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100"
+            className="p-1.5 rounded-sm flex-shrink-0 transition-colors"
+            style={{ color: 'var(--text-faint)' }}
+            onMouseEnter={e => {
+              (e.currentTarget as HTMLElement).style.color = 'var(--text-primary)';
+              (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--bg-hover)';
+            }}
+            onMouseLeave={e => {
+              (e.currentTarget as HTMLElement).style.color = 'var(--text-faint)';
+              (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent';
+            }}
           >
-            ×
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+              <path d="M1 1l11 11M12 1L1 12" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+            </svg>
           </button>
         </div>
 
-        {/* Body */}
-        <div className="p-6 space-y-5">
+        {/* ── Scan meta bar ────────────────────────── */}
+        <div
+          className="flex flex-wrap items-center gap-4 px-6 py-3 text-xs"
+          style={{
+            borderBottom: '1px solid var(--border-default)',
+            backgroundColor: 'var(--bg-hover)',
+          }}
+        >
+          <span style={{ color: 'var(--text-faint)' }}>
+            Scan:{' '}
+            <span style={{ color: 'var(--text-secondary)' }}>
+              ...{finding.scan_id?.slice(-14)}
+            </span>
+          </span>
+          {finding.scan_info?.scan_date && (
+            <span style={{ color: 'var(--text-faint)' }}>
+              Scanned:{' '}
+              <span style={{ color: 'var(--text-secondary)' }}>
+                {formatDate(finding.scan_info.scan_date, true)}
+              </span>
+            </span>
+          )}
+          {finding.scan_info?.target && (
+            <span style={{ color: 'var(--text-faint)' }}>
+              Target:{' '}
+              <span style={{ color: 'var(--text-secondary)' }}>{finding.scan_info.target}</span>
+            </span>
+          )}
+        </div>
 
-          {/* Scan Info */}
-          <div className="bg-gray-50 rounded-lg p-3 flex flex-wrap gap-4 text-xs text-gray-600">
-            <span><span className="font-semibold text-gray-700">Scan:</span> {finding.scan_id}</span>
-            <span><span className="font-semibold text-gray-700">Scanned:</span> {formatDate(finding.scan_info?.scan_date, true)}</span>
-            <span><span className="font-semibold text-gray-700">Target:</span> {finding.scan_info?.target}</span>
-          </div>
+        {/* ── Body ────────────────────────────────── */}
+        <div className="px-6 py-5 space-y-5">
 
           {/* Description */}
           {finding.description && (
             <div>
-              <h3 className="text-sm font-semibold text-gray-700 mb-1">Description</h3>
-              <p className="text-sm text-gray-600 leading-relaxed">{finding.description}</p>
-            </div>
-          )}
-
-          {/* CVE */}
-          {cve && (
-            <div>
-              <h3 className="text-xs font-semibold text-gray-500 uppercase mb-1">CVE ID</h3>
-              <span className="px-2 py-1 bg-purple-50 text-purple-700 border border-purple-200 rounded text-sm font-mono">
-                {cve}
-              </span>
+              <p className="text-xs uppercase tracking-wider mb-2" style={{ color: 'var(--text-muted)' }}>
+                Description
+              </p>
+              <p className="text-sm leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
+                {finding.description}
+              </p>
             </div>
           )}
 
           {/* Evidence */}
           {finding.evidence && (
             <div>
-              <h3 className="text-sm font-semibold text-gray-700 mb-1">Evidence</h3>
-              <pre className="text-xs bg-gray-900 text-green-400 p-3 rounded-lg overflow-x-auto whitespace-pre-wrap font-mono">
+              <p className="text-xs uppercase tracking-wider mb-2" style={{ color: 'var(--text-muted)' }}>
+                Evidence
+              </p>
+              <pre
+                className="text-xs p-4 rounded-sm overflow-x-auto"
+                style={{
+                  backgroundColor: 'var(--bg-base)',
+                  border: '1px solid var(--border-default)',
+                  color: 'var(--accent)',
+                  whiteSpace: 'pre-wrap',
+                  wordBreak: 'break-all',
+                  lineHeight: 1.7,
+                }}
+              >
                 {finding.evidence}
               </pre>
             </div>
@@ -111,48 +218,119 @@ export default function FindingDetailModal({ finding, onClose, onStatusChange }:
           {/* Notes */}
           {finding.notes && (
             <div>
-              <h3 className="text-sm font-semibold text-gray-700 mb-1">Notes</h3>
-              <p className="text-sm text-gray-600 bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+              <p className="text-xs uppercase tracking-wider mb-2" style={{ color: 'var(--text-muted)' }}>
+                Notes
+              </p>
+              <p
+                className="text-sm leading-relaxed p-3 rounded-sm"
+                style={{
+                  color: 'var(--text-secondary)',
+                  backgroundColor: 'var(--bg-hover)',
+                  border: '1px solid var(--border-default)',
+                }}
+              >
                 {finding.notes}
               </p>
             </div>
           )}
 
-          {/* Update Status */}
+          {/* ── Update Status ───────────────────────── */}
           <div>
-            <h3 className="text-sm font-semibold text-gray-700 mb-2">Update Status</h3>
+            <p className="text-xs uppercase tracking-wider mb-3" style={{ color: 'var(--text-muted)' }}>
+              Update Status
+            </p>
+
             {statusError && (
-              <p className="text-xs text-red-600 mb-2 bg-red-50 px-3 py-1.5 rounded-lg border border-red-200">
-                {statusError}
+              <div
+                className="flex items-center gap-2 text-xs px-3 py-2 rounded-sm mb-3"
+                style={{
+                  color: 'var(--danger)',
+                  backgroundColor: 'var(--danger-dim)',
+                  border: '1px solid var(--danger-border)',
+                }}
+              >
+                <span>✗</span> {statusError}
+              </div>
+            )}
+
+            <div className="flex flex-wrap gap-2">
+              {STATUS_OPTIONS.map(opt => {
+                const isActive = currentStatus === opt.value;
+                const hcfg     = STATUS_HOVER[opt.value];
+                return (
+                  <button
+                    key={opt.value}
+                    disabled={updating}
+                    onClick={() => handleStatusChange(opt.value)}
+                    className="px-3 py-1.5 rounded-sm text-xs font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    style={
+                      isActive
+                        ? { color: hcfg.color, backgroundColor: hcfg.bg, border: `1px solid ${hcfg.border}`, fontWeight: 700 }
+                        : { color: 'var(--text-muted)', backgroundColor: 'transparent', border: '1px solid var(--border-default)' }
+                    }
+                    onMouseEnter={e => {
+                      if (!isActive && !updating) {
+                        const el = e.currentTarget as HTMLElement;
+                        el.style.color = hcfg.color;
+                        el.style.backgroundColor = hcfg.bg;
+                        el.style.borderColor = hcfg.border;
+                      }
+                    }}
+                    onMouseLeave={e => {
+                      if (!isActive) {
+                        const el = e.currentTarget as HTMLElement;
+                        el.style.color = 'var(--text-muted)';
+                        el.style.backgroundColor = 'transparent';
+                        el.style.borderColor = 'var(--border-default)';
+                      }
+                    }}
+                  >
+                    {updating && isActive ? (
+                      <span className="flex items-center gap-1.5">
+                        <span
+                          className="w-2.5 h-2.5 border border-t-transparent rounded-full animate-spin"
+                          style={{ borderColor: hcfg.color, borderTopColor: 'transparent' }}
+                        />
+                        Saving...
+                      </span>
+                    ) : opt.label}
+                  </button>
+                );
+              })}
+            </div>
+
+            {saveOk && (
+              <p className="text-xs mt-2 flex items-center gap-1.5" style={{ color: 'var(--accent)' }}>
+                <span>✓</span> Status updated
               </p>
             )}
-            <div className="flex flex-wrap gap-2">
-              {STATUS_OPTIONS.map(s => (
-                <button
-                  key={s}
-                  disabled={updating}
-                  onClick={() => handleStatusChange(s)}
-                  className={`px-3 py-1.5 text-sm rounded-lg border font-medium transition-all ${
-                    currentStatus === s
-                      ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
-                      : 'bg-white text-gray-700 border-gray-300 hover:border-blue-400 hover:text-blue-600'
-                  } disabled:opacity-60 disabled:cursor-not-allowed`}
-                >
-                  {updating && currentStatus !== s
-                    ? '...'
-                    : s.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
-                </button>
-              ))}
-            </div>
           </div>
+        </div>
 
-          {/* Timestamps */}
-          <div className="border-t border-gray-100 pt-4 text-xs text-gray-400 flex flex-wrap gap-4">
-            <span>Created: {formatDate(finding.created_at)}</span>
+        {/* ── Footer ──────────────────────────────── */}
+        <div
+          className="px-6 py-4 flex items-center justify-between"
+          style={{ borderTop: '1px solid var(--border-default)' }}
+        >
+          <p className="text-xs" style={{ color: 'var(--text-faint)' }}>
+            Created: {formatDate(finding.created_at)}
             {finding.updated_at && (
-              <span>Updated: {formatDate(finding.updated_at)}</span>
+              <span> · Updated: {formatDate(finding.updated_at)}</span>
             )}
-          </div>
+          </p>
+          <button
+            onClick={onClose}
+            className="px-4 py-1.5 rounded-sm text-xs transition-colors"
+            style={{
+              color: 'var(--text-muted)',
+              backgroundColor: 'var(--bg-hover)',
+              border: '1px solid var(--border-default)',
+            }}
+            onMouseEnter={e => ((e.currentTarget as HTMLElement).style.color = 'var(--text-primary)')}
+            onMouseLeave={e => ((e.currentTarget as HTMLElement).style.color = 'var(--text-muted)')}
+          >
+            Close
+          </button>
         </div>
       </div>
     </div>

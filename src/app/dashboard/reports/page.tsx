@@ -1,16 +1,26 @@
 // src/app/dashboard/reports/page.tsx
+// src/app/dashboard/reports/page.tsx
+// CHANGE: replaced plain header with hero banner matching the rest of the dashboard style
 'use client';
 import React, { useState, useEffect, useCallback } from 'react';
 import apiClient from '@/lib/api/client';
 import { getReportStatus, downloadReport, exportScan, ReportStatus, ExportFormat } from '@/lib/api/reports';
 import { formatDate } from '@/lib/api/findings';
 
+const mono: React.CSSProperties = { fontFamily: "'JetBrains Mono','Fira Code',monospace" };
+const card: React.CSSProperties = {
+  backgroundColor: 'var(--bg-card)',
+  border: '1px solid var(--border-default)',
+  borderRadius: '2px',
+};
+
 interface Scan {
   id?: string;
   scan_id?: string;
   target: string;
   status: string;
-  tools_used: string[];
+  tools?: string[];
+  tools_used?: string[];
   findings_count?: number;
   started_at: string;
   completed_at?: string;
@@ -23,12 +33,54 @@ interface ScanWithReport extends Scan {
 
 type DownloadingState = Record<string, boolean>;
 
+const FORMAT_CFG: {
+  key: ExportFormat | 'html';
+  label: string;
+  desc: string;
+  color: string;
+  bg: string;
+  border: string;
+}[] = [
+  {
+    key:    'html',
+    label:  'HTML',
+    desc:   'Interactive browser report',
+    color:  'var(--severity-info)',
+    bg:     'rgba(68,136,255,0.08)',
+    border: 'rgba(68,136,255,0.2)',
+  },
+  {
+    key:    'pdf',
+    label:  'PDF',
+    desc:   'Professional branded report',
+    color:  'var(--severity-critical)',
+    bg:     'var(--danger-dim)',
+    border: 'var(--danger-border)',
+  },
+  {
+    key:    'csv',
+    label:  'CSV',
+    desc:   'Excel-friendly findings',
+    color:  'var(--severity-low)',
+    bg:     'rgba(136,204,0,0.08)',
+    border: 'rgba(136,204,0,0.2)',
+  },
+  {
+    key:    'json',
+    label:  'JSON',
+    desc:   'Structured data export',
+    color:  'var(--severity-medium)',
+    bg:     'var(--warn-dim)',
+    border: 'rgba(255,170,0,0.2)',
+  },
+];
+
 export default function ReportsPage() {
-  const [scans, setScans] = useState<ScanWithReport[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [scans, setScans]             = useState<ScanWithReport[]>([]);
+  const [loading, setLoading]         = useState(true);
+  const [error, setError]             = useState<string | null>(null);
   const [downloading, setDownloading] = useState<DownloadingState>({});
-  const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
+  const [toast, setToast]             = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
 
   const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
     setToast({ msg, type });
@@ -41,16 +93,15 @@ export default function ReportsPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await apiClient.get('/api/v1/scans');
+      const res  = await apiClient.get('/api/v1/scans');
       const data = res.data;
       const list: Scan[] = Array.isArray(data) ? data : data?.scans ?? data?.items ?? [];
-      // Only show completed scans on reports page
-      const completed = list.filter(s => s.status === 'completed');
+      const completed    = list.filter(s => s.status === 'completed');
+
       setScans(completed.map(s => ({ ...s, reportLoading: true })));
 
-      // Fetch report status for each scan in parallel
       const withStatus = await Promise.all(
-        completed.map(async (scan) => {
+        completed.map(async scan => {
           try {
             const reportStatus = await getReportStatus(getScanId(scan));
             return { ...scan, reportStatus, reportLoading: false };
@@ -71,7 +122,7 @@ export default function ReportsPage() {
 
   const handleDownload = async (scan: ScanWithReport, format: ExportFormat | 'html') => {
     const scanId = getScanId(scan);
-    const key = `${scanId}-${format}`;
+    const key    = `${scanId}-${format}`;
     setDownloading(prev => ({ ...prev, [key]: true }));
     try {
       if (format === 'html') {
@@ -89,134 +140,221 @@ export default function ReportsPage() {
 
   const isDownloading = (scanId: string, format: string) => downloading[`${scanId}-${format}`];
 
+  const readyCount = scans.filter(s => s.reportStatus?.report_ready).length;
+
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Reports</h1>
-          <p className="text-sm text-gray-500 mt-0.5">
-            {loading ? 'Loading...' : `${scans.length} completed scan${scans.length !== 1 ? 's' : ''}`}
-          </p>
+    <div className="p-6 space-y-5" style={mono}>
+
+      {/* ── Hero Banner ─────────────────────────────────────────────────── */}
+      <div
+        className="rounded-sm overflow-hidden"
+        style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-default)' }}
+      >
+        {/* Accent top bar */}
+        <div className="h-0.5 w-full" style={{ backgroundColor: 'var(--accent)' }} />
+
+        <div className="px-6 py-5 flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-xs" style={{ color: 'var(--accent)' }}>$</span>
+              <span className="text-xs tracking-wider" style={{ color: 'var(--text-faint)' }}>reports --list</span>
+            </div>
+            <h1 className="text-2xl font-black tracking-tight" style={{ color: 'var(--text-primary)' }}>
+              Reports
+            </h1>
+            <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
+              Export scan results as HTML, PDF, CSV, or JSON
+            </p>
+          </div>
+
+          {/* Stat pills + refresh */}
+          <div className="flex items-center gap-2 flex-wrap">
+            {[
+              {
+                label: 'Completed',
+                value: loading ? '…' : scans.length,
+                color: 'var(--text-secondary)',
+              },
+              {
+                label: 'Ready',
+                value: loading ? '…' : readyCount,
+                color: 'var(--accent)',
+              },
+              {
+                label: 'Pending',
+                value: loading ? '…' : scans.length - readyCount,
+                color: 'var(--text-muted)',
+              },
+            ].map(({ label, value, color }) => (
+              <div
+                key={label}
+                className="text-center px-3 py-2 rounded-sm"
+                style={{ backgroundColor: 'var(--bg-hover)', border: '1px solid var(--border-subtle)' }}
+              >
+                <div className="text-sm font-bold" style={{ color }}>{value}</div>
+                <div className="text-[10px]" style={{ color: 'var(--text-faint)' }}>{label}</div>
+              </div>
+            ))}
+
+            <button
+              onClick={fetchScans}
+              className="flex items-center gap-1.5 px-3 py-2 text-xs rounded-sm transition-colors ml-1"
+              style={{
+                color: 'var(--text-muted)',
+                backgroundColor: 'var(--bg-hover)',
+                border: '1px solid var(--border-default)',
+              }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'var(--accent)'; (e.currentTarget as HTMLElement).style.borderColor = 'var(--accent-border)'; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--text-muted)'; (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-default)'; }}
+            >
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                <path d="M1 6a5 5 0 105-.98" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+                <path d="M6 1v2.5L4.5 5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+              </svg>
+              Refresh
+            </button>
+          </div>
         </div>
-        <button
-          onClick={fetchScans}
-          className="px-4 py-2 text-sm font-medium bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2"
-        >
-          ↻ Refresh
-        </button>
       </div>
 
-      {/* Error */}
+      {/* ── Format legend ────────────────────────────────────────────────── */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {FORMAT_CFG.map(f => (
+          <div key={f.key} className="p-3 rounded-sm"
+            style={{ backgroundColor: f.bg, border: `1px solid ${f.border}` }}>
+            <p className="text-xs font-bold mb-0.5" style={{ color: f.color }}>{f.label}</p>
+            <p className="text-xs" style={{ color: 'var(--text-faint)' }}>{f.desc}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* ── Error ────────────────────────────────────────────────────────── */}
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm">
-          {error}
+        <div className="px-4 py-3 rounded-sm text-xs flex items-center gap-2"
+          style={{ backgroundColor: 'var(--danger-dim)', border: '1px solid var(--danger-border)', color: 'var(--danger)' }}>
+          <span>✗</span> {error}
         </div>
       )}
 
-      {/* Export format legend */}
-      <div className="bg-blue-50 border border-blue-100 rounded-xl px-5 py-4 flex flex-wrap gap-6 text-sm text-blue-800">
-        <div className="flex items-center gap-2">
-          <span className="text-base">📄</span>
-          <span><strong>HTML</strong> — Full interactive report (browser viewable)</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-base">📕</span>
-          <span><strong>PDF</strong> — Professional branded report</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-base">📊</span>
-          <span><strong>CSV</strong> — Excel-friendly findings export</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-base">🔧</span>
-          <span><strong>JSON</strong> — Structured data export</span>
-        </div>
-      </div>
+      {/* ── Reports table ────────────────────────────────────────────────── */}
+      <div className="overflow-hidden rounded-sm" style={card}>
 
-      {/* Scans Table */}
-      <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
+        {/* Table header */}
+        <div className="flex items-center justify-between px-5 py-4"
+          style={{ borderBottom: '1px solid var(--border-default)' }}>
+          <div className="flex items-center gap-2">
+            <span className="text-xs" style={{ color: 'var(--accent)' }}>$</span>
+            <span className="text-xs tracking-wider uppercase" style={{ color: 'var(--text-muted)' }}>
+              Scan Reports
+            </span>
+          </div>
+        </div>
+
+        {/* Loading */}
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-20 gap-3 text-gray-400">
-            <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-            <span className="text-sm">Loading reports...</span>
+          <div className="flex items-center justify-center py-20 gap-2" style={{ color: 'var(--text-muted)' }}>
+            <div className="w-5 h-5 border border-t-transparent rounded-full animate-spin"
+              style={{ borderColor: 'var(--border-strong)', borderTopColor: 'var(--accent)' }} />
+            <span className="text-xs">Loading reports...</span>
           </div>
+
         ) : scans.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-gray-400">
-            <div className="text-5xl mb-3">📋</div>
-            <p className="font-medium text-gray-600">No completed scans yet</p>
-            <p className="text-sm mt-1">Reports are available for completed scans</p>
+          <div className="flex flex-col items-center justify-center py-20">
+            <div className="w-12 h-12 rounded-sm flex items-center justify-center text-xl mb-4"
+              style={{ backgroundColor: 'var(--bg-hover)', border: '1px solid var(--border-default)' }}>
+              📋
+            </div>
+            <p className="text-sm font-bold mb-1" style={{ color: 'var(--text-secondary)' }}>
+              No completed scans yet
+            </p>
+            <p className="text-xs" style={{ color: 'var(--text-faint)' }}>
+              Reports are available for completed scans
+            </p>
           </div>
+
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-xs">
               <thead>
-                <tr className="border-b border-gray-200 bg-gray-50">
-                  <th className="text-left px-5 py-3 font-semibold text-gray-600">Target</th>
-                  <th className="text-left px-5 py-3 font-semibold text-gray-600">Tools</th>
-                  <th className="text-left px-5 py-3 font-semibold text-gray-600">Findings</th>
-                  <th className="text-left px-5 py-3 font-semibold text-gray-600">Scan Date</th>
-                  <th className="text-left px-5 py-3 font-semibold text-gray-600">Report Status</th>
-                  <th className="text-left px-5 py-3 font-semibold text-gray-600">Download</th>
+                <tr style={{ borderBottom: '1px solid var(--border-default)' }}>
+                  {['Target', 'Tools', 'Findings', 'Scan Date', 'Report Status', 'Download'].map((h, i) => (
+                    <th
+                      key={i}
+                      className="px-5 py-3 text-left font-medium uppercase tracking-wider"
+                      style={{ color: 'var(--text-faint)', backgroundColor: 'var(--bg-hover)' }}
+                    >
+                      {h}
+                    </th>
+                  ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
-                {scans.map(scan => {
+              <tbody>
+                {scans.map((scan, idx) => {
                   const scanId = getScanId(scan);
-                  const ready = scan.reportStatus?.report_ready ?? false;
-                  const formats: { key: ExportFormat | 'html'; label: string; icon: string }[] = [
-                    { key: 'html', label: 'HTML', icon: '📄' },
-                    { key: 'pdf',  label: 'PDF',  icon: '📕' },
-                    { key: 'csv',  label: 'CSV',  icon: '📊' },
-                    { key: 'json', label: 'JSON', icon: '🔧' },
-                  ];
+                  const ready  = scan.reportStatus?.report_ready ?? false;
+                  const tools  = scan.tools ?? scan.tools_used ?? [];
 
                   return (
-                    <tr key={scanId} className="hover:bg-gray-50 transition-colors">
+                    <tr
+                      key={scanId}
+                      className="transition-colors"
+                      style={{ borderBottom: idx < scans.length - 1 ? '1px solid var(--border-subtle)' : 'none' }}
+                      onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'var(--bg-hover)')}
+                      onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+                    >
                       {/* Target */}
                       <td className="px-5 py-4">
-                        <p className="font-semibold text-gray-900 font-mono">{scan.target}</p>
-                        <p className="text-xs text-gray-400 mt-0.5">{scanId}</p>
+                        <p className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>{scan.target}</p>
+                        <p className="text-xs mt-0.5" style={{ color: 'var(--text-faint)' }}>...{scanId.slice(-14)}</p>
                       </td>
 
                       {/* Tools */}
                       <td className="px-5 py-4">
                         <div className="flex flex-wrap gap-1">
-                          {(scan.tools_used ?? []).map(t => (
-                            <span key={t} className="px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded text-xs font-mono">{t}</span>
-                          ))}
+                          {tools.length > 0 ? tools.map(t => (
+                            <span key={t} className="px-2 py-0.5 rounded-sm"
+                              style={{ color: 'var(--text-muted)', backgroundColor: 'var(--bg-base)', border: '1px solid var(--border-default)' }}>
+                              {t}
+                            </span>
+                          )) : <span style={{ color: 'var(--text-faint)' }}>—</span>}
                         </div>
                       </td>
 
-                      {/* Findings count */}
-                      <td className="px-5 py-4 text-gray-700 font-semibold">
-                        {scan.findings_count ?? '—'}
+                      {/* Findings */}
+                      <td className="px-5 py-4">
+                        <span className="text-sm font-bold"
+                          style={{ color: (scan.findings_count ?? 0) > 0 ? 'var(--warn)' : 'var(--text-faint)' }}>
+                          {scan.findings_count ?? '—'}
+                        </span>
                       </td>
 
-                      {/* Scan date */}
-                      <td className="px-5 py-4 text-gray-500 text-xs">
+                      {/* Date */}
+                      <td className="px-5 py-4 whitespace-nowrap" style={{ color: 'var(--text-muted)' }}>
                         {formatDate(scan.started_at, true)}
                       </td>
 
                       {/* Report status */}
                       <td className="px-5 py-4">
                         {scan.reportLoading ? (
-                          <div className="w-4 h-4 border-2 border-gray-300 border-t-transparent rounded-full animate-spin" />
+                          <div className="w-4 h-4 border border-t-transparent rounded-full animate-spin"
+                            style={{ borderColor: 'var(--border-strong)', borderTopColor: 'var(--accent)' }} />
                         ) : ready ? (
                           <div>
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-green-50 text-green-700 border border-green-200 rounded-full text-xs font-medium">
-                              <span className="w-1.5 h-1.5 bg-green-500 rounded-full" />
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-sm text-xs font-medium"
+                              style={{ color: 'var(--accent)', backgroundColor: 'var(--accent-dim)', border: '1px solid var(--accent-border)' }}>
+                              <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: 'var(--accent)' }} />
                               Ready
                             </span>
                             {scan.reportStatus?.generated_at && (
-                              <p className="text-xs text-gray-400 mt-1">
+                              <p className="text-xs mt-1" style={{ color: 'var(--text-faint)' }}>
                                 {formatDate(scan.reportStatus.generated_at, true)}
                               </p>
                             )}
                           </div>
                         ) : (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-gray-50 text-gray-500 border border-gray-200 rounded-full text-xs font-medium">
-                            <span className="w-1.5 h-1.5 bg-gray-400 rounded-full" />
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-sm text-xs"
+                            style={{ color: 'var(--text-muted)', backgroundColor: 'var(--bg-hover)', border: '1px solid var(--border-default)' }}>
+                            <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: 'var(--text-muted)' }} />
                             Not generated
                           </span>
                         )}
@@ -225,19 +363,23 @@ export default function ReportsPage() {
                       {/* Download buttons */}
                       <td className="px-5 py-4">
                         <div className="flex flex-wrap gap-1.5">
-                          {formats.map(({ key, label, icon }) => {
+                          {FORMAT_CFG.map(({ key, label, color, bg, border }) => {
                             const busy = isDownloading(scanId, key);
                             return (
                               <button
                                 key={key}
                                 onClick={() => handleDownload(scan, key)}
                                 disabled={busy}
-                                className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium bg-white border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-sm text-xs font-medium transition-opacity disabled:opacity-40 disabled:cursor-not-allowed hover:opacity-75"
+                                style={{ color, backgroundColor: bg, border: `1px solid ${border}` }}
                               >
                                 {busy ? (
-                                  <span className="w-3 h-3 border border-gray-400 border-t-transparent rounded-full animate-spin" />
+                                  <span className="w-2.5 h-2.5 border border-t-transparent rounded-full animate-spin"
+                                    style={{ borderColor: color, borderTopColor: 'transparent' }} />
                                 ) : (
-                                  <span>{icon}</span>
+                                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                                    <path d="M5 1v6M2 7l3 2 3-2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+                                  </svg>
                                 )}
                                 {label}
                               </button>
@@ -254,12 +396,20 @@ export default function ReportsPage() {
         )}
       </div>
 
-      {/* Toast notification */}
+      {/* ── Toast ────────────────────────────────────────────────────────── */}
       {toast && (
-        <div className={`fixed bottom-6 right-6 px-5 py-3 rounded-xl shadow-lg text-sm font-medium text-white transition-all z-50 ${
-          toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'
-        }`}>
-          {toast.type === 'success' ? '✓' : '✗'} {toast.msg}
+        <div
+          className="fixed bottom-6 right-6 px-5 py-3 rounded-sm text-xs font-medium z-50 flex items-center gap-2"
+          style={{
+            ...mono,
+            backgroundColor: toast.type === 'success' ? 'var(--accent-dim)' : 'var(--danger-dim)',
+            border: `1px solid ${toast.type === 'success' ? 'var(--accent-border)' : 'var(--danger-border)'}`,
+            color: toast.type === 'success' ? 'var(--accent)' : 'var(--danger)',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
+          }}
+        >
+          <span>{toast.type === 'success' ? '✓' : '✗'}</span>
+          {toast.msg}
         </div>
       )}
     </div>

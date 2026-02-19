@@ -8,42 +8,38 @@ interface Props {
   size?: 'sm' | 'md';
 }
 
-const config: Record<Severity, { label: string; classes: string; dot: string }> = {
-  critical: {
-    label: 'Critical',
-    classes: 'bg-red-100 text-red-800 border border-red-200',
-    dot: 'bg-red-500',
-  },
-  high: {
-    label: 'High',
-    classes: 'bg-orange-100 text-orange-800 border border-orange-200',
-    dot: 'bg-orange-500',
-  },
-  medium: {
-    label: 'Medium',
-    classes: 'bg-yellow-100 text-yellow-800 border border-yellow-200',
-    dot: 'bg-yellow-500',
-  },
-  low: {
-    label: 'Low',
-    classes: 'bg-blue-100 text-blue-800 border border-blue-200',
-    dot: 'bg-blue-500',
-  },
-  info: {
-    label: 'Info',
-    classes: 'bg-gray-100 text-gray-700 border border-gray-200',
-    dot: 'bg-gray-400',
-  },
+const CFG: Record<Severity, { label: string; color: string; bg: string; border: string }> = {
+  critical: { label: 'Critical', color: 'var(--severity-critical)', bg: 'var(--danger-dim)',          border: 'var(--danger-border)'        },
+  high:     { label: 'High',     color: 'var(--severity-high)',     bg: 'rgba(255,136,0,0.08)',        border: 'rgba(255,136,0,0.2)'         },
+  medium:   { label: 'Medium',   color: 'var(--severity-medium)',   bg: 'var(--warn-dim)',             border: 'rgba(255,170,0,0.2)'         },
+  low:      { label: 'Low',      color: 'var(--severity-low)',      bg: 'rgba(136,204,0,0.08)',        border: 'rgba(136,204,0,0.2)'         },
+  info:     { label: 'Info',     color: 'var(--severity-info)',     bg: 'rgba(68,136,255,0.08)',       border: 'rgba(68,136,255,0.2)'        },
 };
 
 export default function FindingSeverityBadge({ severity, size = 'md' }: Props) {
-  const { label, classes, dot } = config[severity] ?? config.info;
-  const sizeClasses = size === 'sm' ? 'px-2 py-0.5 text-xs' : 'px-2.5 py-1 text-sm';
+  const cfg = CFG[severity] ?? CFG.info;
+  const px  = size === 'sm' ? '6px'  : '10px';
+  const py  = size === 'sm' ? '2px'  : '4px';
+  const fs  = size === 'sm' ? '10px' : '11px';
+  const dot = size === 'sm' ? 5      : 6;
 
   return (
-    <span className={`inline-flex items-center gap-1.5 rounded-full font-medium ${sizeClasses} ${classes}`}>
-      <span className={`w-1.5 h-1.5 rounded-full ${dot}`} />
-      {label}
+    <span
+      className="inline-flex items-center gap-1.5 rounded-sm font-bold uppercase tracking-wider whitespace-nowrap"
+      style={{
+        color: cfg.color,
+        backgroundColor: cfg.bg,
+        border: `1px solid ${cfg.border}`,
+        padding: `${py} ${px}`,
+        fontSize: fs,
+        fontFamily: "'JetBrains Mono','Fira Code',monospace",
+      }}
+    >
+      <span
+        className="rounded-full flex-shrink-0"
+        style={{ width: dot, height: dot, backgroundColor: cfg.color }}
+      />
+      {cfg.label}
     </span>
   );
 }

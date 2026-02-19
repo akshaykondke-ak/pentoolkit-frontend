@@ -8,15 +8,22 @@ import FindingStatusBadge from './FindingStatusBadge';
 import FindingsFilterBar from './FindingsFilterBar';
 import FindingDetailModal from './FindingDetailModal';
 
+const mono: React.CSSProperties = { fontFamily: "'JetBrains Mono','Fira Code',monospace" };
+const card: React.CSSProperties = {
+  backgroundColor: 'var(--bg-card)',
+  border: '1px solid var(--border-default)',
+  borderRadius: '2px',
+};
+
 type SeverityTab = 'all' | 'critical' | 'high' | 'medium' | 'low' | 'info';
 
-const SEVERITY_TABS: { key: SeverityTab; label: string; color: string; bg: string; activeBg: string; dot: string }[] = [
-  { key: 'all',      label: 'All',      color: 'text-gray-700',   bg: 'bg-gray-100',    activeBg: 'bg-gray-800 text-white',    dot: 'bg-gray-400' },
-  { key: 'critical', label: 'Critical', color: 'text-red-700',    bg: 'bg-red-50',      activeBg: 'bg-red-600 text-white',     dot: 'bg-red-500' },
-  { key: 'high',     label: 'High',     color: 'text-orange-700', bg: 'bg-orange-50',   activeBg: 'bg-orange-500 text-white',  dot: 'bg-orange-500' },
-  { key: 'medium',   label: 'Medium',   color: 'text-yellow-700', bg: 'bg-yellow-50',   activeBg: 'bg-yellow-500 text-white',  dot: 'bg-yellow-500' },
-  { key: 'low',      label: 'Low',      color: 'text-blue-700',   bg: 'bg-blue-50',     activeBg: 'bg-blue-500 text-white',    dot: 'bg-blue-400' },
-  { key: 'info',     label: 'Info',     color: 'text-gray-600',   bg: 'bg-gray-50',     activeBg: 'bg-gray-500 text-white',    dot: 'bg-gray-400' },
+const TABS: { key: SeverityTab; label: string; color: string; bg: string; border: string }[] = [
+  { key: 'all',      label: 'All',      color: 'var(--text-primary)',      bg: 'var(--bg-hover)',          border: 'var(--border-default)' },
+  { key: 'critical', label: 'Critical', color: 'var(--severity-critical)', bg: 'var(--danger-dim)',         border: 'var(--danger-border)'  },
+  { key: 'high',     label: 'High',     color: 'var(--severity-high)',     bg: 'rgba(255,136,0,0.08)',      border: 'rgba(255,136,0,0.2)'   },
+  { key: 'medium',   label: 'Medium',   color: 'var(--severity-medium)',   bg: 'var(--warn-dim)',           border: 'rgba(255,170,0,0.2)'   },
+  { key: 'low',      label: 'Low',      color: 'var(--severity-low)',      bg: 'rgba(136,204,0,0.08)',      border: 'rgba(136,204,0,0.2)'   },
+  { key: 'info',     label: 'Info',     color: 'var(--severity-info)',     bg: 'rgba(68,136,255,0.08)',     border: 'rgba(68,136,255,0.2)'  },
 ];
 
 export default function FindingsList() {
@@ -24,22 +31,16 @@ export default function FindingsList() {
   const [selectedFinding, setSelectedFinding] = useState<Finding | null>(null);
   const [activeTab, setActiveTab] = useState<SeverityTab>('all');
 
-  // Count per severity across ALL findings
   const counts = useMemo(() => {
     const c: Record<string, number> = { all: findings.length, critical: 0, high: 0, medium: 0, low: 0, info: 0 };
     findings.forEach(f => { if (c[f.severity] !== undefined) c[f.severity]++; });
     return c;
   }, [findings]);
 
-  // Filtered findings based on active tab
-  const visibleFindings = useMemo(() => {
-    if (activeTab === 'all') return findings;
-    return findings.filter(f => f.severity === activeTab);
-  }, [findings, activeTab]);
-
-  const handleTabClick = (tab: SeverityTab) => {
-    setActiveTab(tab);
-  };
+  const visibleFindings = useMemo(() =>
+    activeTab === 'all' ? findings : findings.filter(f => f.severity === activeTab),
+    [findings, activeTab]
+  );
 
   const handleStatusChange = async (id: number, status: Finding['status']) => {
     const result = await updateFinding(id, { status });
@@ -50,156 +51,245 @@ export default function FindingsList() {
   };
 
   return (
-    <div className="space-y-4">
-      {/* Page Header */}
+    <div className="p-6 space-y-5" style={mono}>
+
+      {/* ── Header ─────────────────────────────── */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Findings</h1>
-          <p className="text-sm text-gray-500 mt-0.5">
-            {loading ? 'Loading...' : `${total} total finding${total !== 1 ? 's' : ''}`}
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-xs" style={{ color: 'var(--accent)' }}>$</span>
+            <span className="text-xs tracking-wider" style={{ color: 'var(--text-faint)' }}>findings --list</span>
+          </div>
+          <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+            {loading ? 'Loading...' : `${total} finding${total !== 1 ? 's' : ''} total`}
           </p>
         </div>
         <button
           onClick={() => fetchFindings()}
-          className="px-4 py-2 text-sm font-medium bg-white text-black border border-gray-300 rounded-lg hover:bg-gray-200 transition-colors flex items-center gap-2"
+          className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-sm transition-colors"
+          style={{
+            color: 'var(--text-muted)',
+            backgroundColor: 'var(--bg-hover)',
+            border: '1px solid var(--border-default)',
+          }}
+          onMouseEnter={e => ((e.currentTarget as HTMLElement).style.color = 'var(--text-primary)')}
+          onMouseLeave={e => ((e.currentTarget as HTMLElement).style.color = 'var(--text-muted)')}
         >
-          ↻ Refresh
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+            <path d="M1 6a5 5 0 105-.98" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+            <path d="M6 1v2.5L4.5 5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+          </svg>
+          Refresh
         </button>
       </div>
 
-      {/* Severity Summary Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-        {SEVERITY_TABS.map(tab => {
+      {/* ── Severity summary cards ──────────────── */}
+      <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
+        {TABS.map(tab => {
           const isActive = activeTab === tab.key;
-          const count = counts[tab.key] ?? 0;
+          const count    = counts[tab.key] ?? 0;
           return (
             <button
               key={tab.key}
-              onClick={() => handleTabClick(tab.key)}
-              className={`rounded-xl p-4 text-left transition-all border-2 ${
-                isActive
-                  ? `${tab.activeBg} border-transparent shadow-md scale-[1.02]`
-                  : `bg-white border-gray-100 hover:border-gray-300 hover:shadow-sm`
-              }`}
+              onClick={() => setActiveTab(tab.key)}
+              className="p-4 text-left rounded-sm transition-all"
+              style={{
+                backgroundColor: isActive ? tab.bg : 'var(--bg-card)',
+                border: `1px solid ${isActive ? tab.color : 'var(--border-default)'}`,
+                outline: 'none',
+              }}
+              onMouseEnter={e => { if (!isActive) (e.currentTarget as HTMLElement).style.borderColor = tab.color; }}
+              onMouseLeave={e => { if (!isActive) (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-default)'; }}
             >
-              <div className="flex items-center gap-1.5 mb-1">
-                <span className={`w-2 h-2 rounded-full ${isActive ? 'bg-white/70' : tab.dot}`} />
-                <span className={`text-xs font-medium ${isActive ? 'text-white/80' : 'text-gray-500'}`}>
-                  {tab.label}
-                </span>
-              </div>
-              <div className={`text-2xl font-bold ${isActive ? 'text-white' : tab.color}`}>
+              <div className="text-2xl font-bold mb-1" style={{ color: isActive ? tab.color : 'var(--text-primary)' }}>
                 {loading ? '—' : count}
+              </div>
+              <div className="text-xs uppercase tracking-wider" style={{ color: isActive ? tab.color : 'var(--text-faint)' }}>
+                {tab.label}
               </div>
             </button>
           );
         })}
       </div>
 
-      {/* Filters */}
-      <FindingsFilterBar onFilter={(f) => { applyFilters(f); setActiveTab('all'); }} onClear={() => { clearFilters(); setActiveTab('all'); }} />
+      {/* ── Filter bar ──────────────────────────── */}
+      <FindingsFilterBar
+        onFilter={f => { applyFilters(f); setActiveTab('all'); }}
+        onClear={()  => { clearFilters();  setActiveTab('all'); }}
+      />
 
-      {/* Error */}
+      {/* ── Error ───────────────────────────────── */}
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm">
-          {error}
+        <div
+          className="px-4 py-3 rounded-sm text-xs flex items-center gap-2"
+          style={{
+            backgroundColor: 'var(--danger-dim)',
+            border: '1px solid var(--danger-border)',
+            color: 'var(--danger)',
+          }}
+        >
+          <span>✗</span> {error}
         </div>
       )}
 
-      {/* Table */}
-      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-        {/* Table Header with active filter label */}
-        <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+      {/* ── Table ───────────────────────────────── */}
+      <div className="overflow-hidden rounded-sm" style={card}>
+
+        {/* Table sub-header */}
+        <div
+          className="flex items-center justify-between px-5 py-4"
+          style={{ borderBottom: '1px solid var(--border-default)' }}
+        >
           <div className="flex items-center gap-2">
-            {activeTab !== 'all' && (
-              <FindingSeverityBadge severity={activeTab as any} />
-            )}
-            <span className="text-sm text-gray-600 font-medium">
-              {loading ? 'Loading...' : `Showing ${visibleFindings.length} finding${visibleFindings.length !== 1 ? 's' : ''}${activeTab !== 'all' ? ` (${activeTab})` : ''}`}
+            <span className="text-xs" style={{ color: 'var(--accent)' }}>$</span>
+            <span className="text-xs tracking-wider uppercase" style={{ color: 'var(--text-muted)' }}>
+              {loading
+                ? 'Loading...'
+                : `${visibleFindings.length} finding${visibleFindings.length !== 1 ? 's' : ''}${activeTab !== 'all' ? ` · ${activeTab}` : ''}`}
             </span>
           </div>
           {activeTab !== 'all' && (
             <button
               onClick={() => setActiveTab('all')}
-              className="text-xs text-gray-400 hover:text-gray-600"
+              className="text-xs transition-colors"
+              style={{ color: 'var(--text-faint)' }}
+              onMouseEnter={e => ((e.currentTarget as HTMLElement).style.color = 'var(--text-muted)')}
+              onMouseLeave={e => ((e.currentTarget as HTMLElement).style.color = 'var(--text-faint)')}
             >
-              Clear filter ×
+              ✕ Clear filter
             </button>
           )}
         </div>
 
+        {/* Loading */}
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-20 text-gray-400 gap-3">
-            <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-            <span className="text-sm">Loading findings...</span>
+          <div className="flex items-center justify-center py-20 gap-2" style={{ color: 'var(--text-muted)' }}>
+            <div
+              className="w-5 h-5 border border-t-transparent rounded-full animate-spin"
+              style={{ borderColor: 'var(--border-strong)', borderTopColor: 'var(--accent)' }}
+            />
+            <span className="text-xs">Loading findings...</span>
           </div>
+
+        /* Empty */
         ) : visibleFindings.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-gray-400">
-            <div className="text-5xl mb-3">{activeTab === 'all' ? '🛡️' : '✅'}</div>
-            <p className="font-medium text-gray-600">
+          <div className="flex flex-col items-center justify-center py-20">
+            <div
+              className="w-12 h-12 rounded-sm flex items-center justify-center text-xl mb-4"
+              style={{ backgroundColor: 'var(--bg-hover)', border: '1px solid var(--border-default)' }}
+            >
+              {activeTab === 'all' ? '🛡' : '✓'}
+            </div>
+            <p className="text-sm font-bold mb-1" style={{ color: 'var(--text-secondary)' }}>
               {activeTab === 'all' ? 'No findings found' : `No ${activeTab} findings`}
             </p>
-            <p className="text-sm mt-1">
-              {activeTab === 'all' ? 'Run a scan to discover vulnerabilities' : 'Good news — nothing at this severity level'}
+            <p className="text-xs" style={{ color: 'var(--text-faint)' }}>
+              {activeTab === 'all'
+                ? 'Run a scan to discover vulnerabilities'
+                : 'Nothing at this severity level'}
             </p>
           </div>
+
+        /* Table rows */
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-xs">
               <thead>
-                <tr className="border-b border-gray-200 bg-gray-50">
-                  <th className="text-left px-4 py-3 font-semibold text-gray-600">Severity</th>
-                  <th className="text-left px-4 py-3 font-semibold text-gray-600">Title</th>
-                  <th className="text-left px-4 py-3 font-semibold text-gray-600">Target</th>
-                  <th className="text-left px-4 py-3 font-semibold text-gray-600">Tool</th>
-                  <th className="text-left px-4 py-3 font-semibold text-gray-600">CVE</th>
-                  <th className="text-left px-4 py-3 font-semibold text-gray-600">Status</th>
-                  <th className="text-left px-4 py-3 font-semibold text-gray-600">Date</th>
-                  <th className="px-4 py-3"></th>
+                <tr style={{ borderBottom: '1px solid var(--border-default)' }}>
+                  {['Severity', 'Title', 'Target', 'Tool', 'CVE', 'Status', 'Date', ''].map((h, i) => (
+                    <th
+                      key={i}
+                      className="px-4 py-3 text-left font-medium uppercase tracking-wider"
+                      style={{ color: 'var(--text-faint)', backgroundColor: 'var(--bg-hover)' }}
+                    >
+                      {h}
+                    </th>
+                  ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
-                {visibleFindings.map(finding => (
-                  <tr
-                    key={finding.id}
-                    className="hover:bg-gray-50 transition-colors cursor-pointer"
-                    onClick={() => setSelectedFinding(finding)}
-                  >
-                    <td className="px-4 py-3">
-                      <FindingSeverityBadge severity={finding.severity} size="sm" />
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className="font-medium text-gray-900">{finding.title}</span>
-                    </td>
-                    <td className="px-4 py-3 text-gray-600 font-mono text-xs">
-                      {getHost(finding)}
-                    </td>
-                    <td className="px-4 py-3 text-gray-600">{finding.tool || '—'}</td>
-                    <td className="px-4 py-3">
-                      {extractCVE(finding.evidence) ? (
-                        <span className="px-2 py-0.5 bg-purple-50 text-purple-700 border border-purple-200 rounded text-xs font-mono">
-                          {extractCVE(finding.evidence)}
+              <tbody>
+                {visibleFindings.map((finding, idx) => {
+                  const cve = extractCVE(finding.evidence);
+                  return (
+                    <tr
+                      key={finding.id}
+                      className="cursor-pointer transition-colors group"
+                      style={{
+                        borderBottom: idx < visibleFindings.length - 1
+                          ? '1px solid var(--border-subtle)'
+                          : 'none',
+                      }}
+                      onClick={() => setSelectedFinding(finding)}
+                      onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'var(--bg-hover)')}
+                      onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+                    >
+                      {/* Severity */}
+                      <td className="px-4 py-3">
+                        <FindingSeverityBadge severity={finding.severity} size="sm" />
+                      </td>
+
+                      {/* Title */}
+                      <td className="px-4 py-3 max-w-[200px]">
+                        <span
+                          className="font-medium block truncate"
+                          style={{ color: 'var(--text-primary)' }}
+                          title={finding.title}
+                        >
+                          {finding.title}
                         </span>
-                      ) : (
-                        <span className="text-gray-300">—</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3">
-                      <FindingStatusBadge status={finding.status} size="sm" />
-                    </td>
-                    <td className="px-4 py-3 text-gray-400 text-xs">
-                      {formatDate(finding.created_at, true)}
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <button
-                        onClick={e => { e.stopPropagation(); setSelectedFinding(finding); }}
-                        className="text-blue-600 hover:text-blue-800 text-xs font-medium whitespace-nowrap"
-                      >
-                        Details →
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+
+                      {/* Target */}
+                      <td className="px-4 py-3" style={{ color: 'var(--text-muted)' }}>
+                        {getHost(finding)}
+                      </td>
+
+                      {/* Tool */}
+                      <td className="px-4 py-3" style={{ color: 'var(--text-muted)' }}>
+                        {finding.tool || '—'}
+                      </td>
+
+                      {/* CVE */}
+                      <td className="px-4 py-3">
+                        {cve ? (
+                          <span
+                            className="px-2 py-0.5 rounded-sm"
+                            style={{
+                              color: 'var(--severity-info)',
+                              backgroundColor: 'rgba(68,136,255,0.08)',
+                              border: '1px solid rgba(68,136,255,0.2)',
+                            }}
+                          >
+                            {cve}
+                          </span>
+                        ) : (
+                          <span style={{ color: 'var(--text-faint)' }}>—</span>
+                        )}
+                      </td>
+
+                      {/* Status */}
+                      <td className="px-4 py-3">
+                        <FindingStatusBadge status={finding.status} size="sm" />
+                      </td>
+
+                      {/* Date */}
+                      <td className="px-4 py-3 whitespace-nowrap" style={{ color: 'var(--text-faint)' }}>
+                        {formatDate(finding.created_at, true)}
+                      </td>
+
+                      {/* Action */}
+                      <td className="px-4 py-3 text-right">
+                        <button
+                          onClick={e => { e.stopPropagation(); setSelectedFinding(finding); }}
+                          className="text-xs opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap"
+                          style={{ color: 'var(--accent)' }}
+                        >
+                          Details →
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
