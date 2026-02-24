@@ -321,7 +321,7 @@ export default function ReportsPage() {
                       </td>
 
                       {/* Findings */}
-                      <td className="px-5 py-4">
+                      <td className="px-10 py-4">
                         <span className="text-sm font-bold"
                           style={{ color: (scan.findings_count ?? 0) > 0 ? 'var(--warn)' : 'var(--text-faint)' }}>
                           {scan.findings_count ?? '—'}
@@ -362,7 +362,7 @@ export default function ReportsPage() {
 
                       {/* Download buttons */}
                       <td className="px-5 py-4">
-                        <div className="flex flex-wrap gap-1.5">
+                        <div className="flex flex-wrap gap-1.5 ">
                           {FORMAT_CFG.map(({ key, label, color, bg, border }) => {
                             const busy = isDownloading(scanId, key);
                             return (

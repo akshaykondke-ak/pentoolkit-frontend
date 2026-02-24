@@ -6,7 +6,7 @@
 */
 
 /* ── DARK THEME (default) ─────────────────────────────── */
-:root {
+/* :root {
   --bg-base:        #0a0a0a;
   --bg-card:        #0d0d0d;
   --bg-hover:       #111111;
@@ -44,10 +44,10 @@
 
   --grid-line: rgba(0, 255, 136, 0.03);
   --card-shadow: 0 0 40px rgba(0, 255, 136, 0.04), inset 0 0 40px rgba(0,0,0,0.4);
-}
+} */
 
 /* ── LIGHT THEME ──────────────────────────────────────── */
-.theme-light {
+/* .theme-light {
   --bg-base:        #f5f5f0;
   --bg-card:        #ffffff;
   --bg-hover:       #f9f9f7;
@@ -85,9 +85,166 @@
 
   --grid-line: rgba(0, 136, 68, 0.04);
   --card-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.04);
-}
+} */
 
 /* ── Apply base bg to html/body ───────────────────────── */
+/* html, body {
+  background-color: var(--bg-base);
+  color: var(--text-primary);
+  transition: background-color 0.2s ease, color 0.2s ease;
+} */
+
+
+
+
+
+/* src/styles/themes.css */
+/* 
+  Theme system for Pentoolkit
+  All components must use CSS variables — no hardcoded colors.
+  Toggle .theme-light on <html> or <body> to switch themes.
+*/
+
+/* ────────────────────────────────────────────────────────── */
+/* ── DARK THEME (default) ───────────────────────────────── */
+/* ────────────────────────────────────────────────────────── */
+
+:root {
+  /* Base backgrounds — softened */
+  --bg-base:        #111315;   /* was #0a0a0a */
+  --bg-card:        #171a1d;   /* was #0d0d0d */
+  --bg-hover:       #1e2226;
+  --bg-input:       #1b1f23;
+
+  /* Borders */
+  --border-default: #242a30;
+  --border-subtle:  #1f2429;
+  --border-strong:  #2e353c;
+
+  /* Text */
+  --text-primary:   #e6e6e6;
+  /* --text-secondary: #b8c0c7; */
+  --text-secondary: #aab2b9;
+  --text-muted:     #8a939b;
+  --text-faint:     #5c636a;
+  --text-ghost:     #3c4248;
+
+  /* Accent */
+  /* --accent:         #00ff88; */
+  --accent: #00d97e;
+  --accent-dim:     rgba(0, 255, 136, 0.08);
+  --accent-border:  rgba(0, 255, 136, 0.25);
+  --accent-glow:    rgba(0, 255, 136, 0.06);
+
+  /* Status */
+  --danger:         #ff4d4d;
+  --danger-dim:     rgba(255, 77, 77, 0.06);
+  --danger-border:  rgba(255, 77, 77, 0.25);
+
+  --warn:           #ffb020;
+  --warn-dim:       rgba(255, 176, 32, 0.08);
+
+  --info:           #5aa2ff;
+
+  /* Severity */
+  --severity-critical: #ff4d4d;
+  --severity-high:     #ff8800;
+  --severity-medium:   #ffb020;
+  --severity-low:      #88d600;
+  --severity-info:     #5aa2ff;
+
+  /* Visual effects */
+  --grid-line: rgba(255, 255, 255, 0.03);
+  /* --card-shadow: 0 6px 18px rgba(0,0,0,0.35); */
+  --card-shadow: 0 8px 24px rgba(0,0,0,0.45);
+
+  /* ScanForm depth layers */
+  --bg-deep:        #0d0f11;
+  --bg-raised:      #1c2024;
+
+  --bg-choice:      #1a1e22;
+  --bg-choice-on:   #20252a;
+
+  --border-choice:     #2b3138;
+  --border-choice-on:  #3a424a;
+
+  --accent-soft:    rgba(0, 255, 136, 0.05);
+  --accent-pulse:   rgba(0, 255, 136, 0.12);
+
+  --tool-stripe:    2px;
+}
+/* ────────────────────────────────────────────────────────── */
+/* ── LIGHT THEME ────────────────────────────────────────── */
+/* ────────────────────────────────────────────────────────── */
+
+.theme-light {
+  /* Base backgrounds */
+  /* --bg-base:        #f5f5f0;   */
+  --bg-base:        #f4f6f8; 
+  --bg-card:        #ffffff;
+  --bg-hover:       #f9f9f7;
+  --bg-input:       #fafaf8;
+
+  /* Borders */
+  --border-default: #e0e0d8;
+  --border-subtle:  #ebebea;
+  --border-strong:  #cccccc;
+
+  /* Text */
+  --text-primary:   #111111;
+  --text-secondary: #444444;
+  --text-muted:     #777777;
+  --text-faint:     #aaaaaa;
+  --text-ghost:     #cccccc;
+
+  /* Accent */
+  --accent:         #008844;
+  --accent-dim:     rgba(0, 136, 68, 0.08);
+  --accent-border:  rgba(0, 136, 68, 0.25);
+  --accent-glow:    rgba(0, 136, 68, 0.03);
+
+  /* Status */
+  --danger:         #cc2222;
+  --danger-dim:     rgba(204, 34, 34, 0.05);
+  --danger-border:  rgba(204, 34, 34, 0.2);
+
+  --warn:           #cc7700;
+  --warn-dim:       rgba(204, 119, 0, 0.06);
+
+  --info:           #2255cc;
+
+  /* Severity */
+  --severity-critical: #cc2222;
+  --severity-high:     #cc5500;
+  --severity-medium:   #cc7700;
+  --severity-low:      #558800;
+  --severity-info:     #2255cc;
+
+  /* Visual effects */
+  --grid-line: rgba(0, 136, 68, 0.04);
+  --card-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.04);
+
+  /* ── ScanForm Additions ───────────────────────────── */
+
+  --bg-deep:        #e8e8e3;
+  --bg-raised:      #fcfcf9;
+
+  --bg-choice:      #f5f5f1;
+  --bg-choice-on:   #ffffff;
+
+  --border-choice:     #ddddd5;
+  --border-choice-on:  #c0c0b5;
+
+  --accent-soft:    rgba(0, 136, 68, 0.05);
+  --accent-pulse:   rgba(0, 136, 68, 0.12);
+
+  --tool-stripe:    2px;
+}
+
+/* ────────────────────────────────────────────────────────── */
+/* Apply base background globally */
+/* ────────────────────────────────────────────────────────── */
+
 html, body {
   background-color: var(--bg-base);
   color: var(--text-primary);

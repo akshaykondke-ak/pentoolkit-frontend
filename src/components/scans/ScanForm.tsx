@@ -1,8 +1,10 @@
 // // src/components/scans/ScanForm.tsx
 'use client';
-import React, { useState } from 'react';
+
+import React, { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useTheme } from '@/lib/theme/ThemeProvider';
 import apiClient from '@/lib/api/client';
 import {
   TOOLS,
@@ -15,11 +17,109 @@ import {
   NumberField,
 } from '@/lib/config/tools';
 
-const mono: React.CSSProperties = { fontFamily: "'IBM Plex Mono', 'Fira Code', monospace" };
+// ─────────────────────────────────────────────────────────────────────────────
+// GLOBAL STYLES (injected once)
+// ─────────────────────────────────────────────────────────────────────────────
+
+const GLOBAL_CSS = `
+  /* NEW variables to add alongside your existing themes.css */
+  :root {
+    --bg-deep:         #070707;
+    --bg-raised:       #0f0f0f;
+    --bg-choice:       #0c0c0c;
+    --bg-choice-on:    #111111;
+    --border-choice:   #1e1e1e;
+    --border-choice-on:#2a2a2a;
+    --accent-soft:     rgba(0,255,136,0.06);
+    --accent-pulse:    rgba(0,255,136,0.14);
+  }
+  .theme-light {
+    --bg-deep:         #e8e8e3;
+    --bg-raised:       #fcfcf9;
+    --bg-choice:       #f2f2ee;
+    --bg-choice-on:    #ffffff;
+    --border-choice:   #ddddd5;
+    --border-choice-on:#c0c0b5;
+    --accent-soft:     rgba(0,136,68,0.05);
+    --accent-pulse:    rgba(0,136,68,0.12);
+  }
+
+  /* scrollbar */
+  .sf-scroll::-webkit-scrollbar { width: 2px; }
+  .sf-scroll::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 1px; }
+
+  /* target focus ring */
+  .sf-target-box:focus-within {
+    border-color: var(--accent-border) !important;
+    box-shadow: 0 0 0 3px var(--accent-dim), 0 0 12px var(--accent-soft) !important;
+  }
+
+  /* launch hover */
+  .sf-launch:hover:not(:disabled) {
+    background: var(--accent-pulse) !important;
+    border-color: var(--accent) !important;
+    box-shadow: 0 0 24px var(--accent-glow) !important;
+  }
+
+  /* hint chip hover */
+  .sf-hint:hover {
+    color: var(--accent) !important;
+    border-color: var(--accent-border) !important;
+    background: var(--accent-dim) !important;
+  }
+
+  /* tool row accent bar */
+  .sf-tr { position: relative; overflow: hidden; }
+  .sf-tr::before {
+    content: '';
+    position: absolute; left: 0; top: 6px; bottom: 6px;
+    width: 2px; border-radius: 1px;
+    background: var(--sf-tc, transparent);
+    opacity: 0; transition: opacity .15s;
+  }
+  .sf-tr.sf-active::before { opacity: 1; }
+
+  /* choice hover */
+  .sf-choice:hover {
+    border-color: var(--border-choice-on) !important;
+    background: var(--bg-choice-on) !important;
+  }
+
+  /* range thumb */
+  input[type=range] { -webkit-appearance: none; cursor: pointer; }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px; height: 16px; border-radius: 50%;
+    background: var(--accent); border: 2px solid var(--bg-deep);
+    box-shadow: 0 0 12px var(--accent-glow);
+    transition: transform .1s;
+  }
+  input[type=range]:active::-webkit-slider-thumb { transform: scale(1.2); }
+
+  /* cfg panel slide-in */
+  @keyframes sf-slide {
+    from { opacity: 0; transform: translateX(10px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+  .sf-slide { animation: sf-slide .17s cubic-bezier(.22,.68,0,1.2) both; }
+
+  /* field label line */
+  .sf-field-label {
+    display: flex; align-items: center; gap: 8px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px; letter-spacing: .2em; text-transform: uppercase;
+    color: var(--text-muted); margin-bottom: 12px;
+  }
+  .sf-field-label::after {
+    content: ''; flex: 1; height: 1px; background: var(--border-default);
+  }
+`;
 
 // ─────────────────────────────────────────────────────────────────────────────
-// ERROR HELPER
+// UTILS
 // ─────────────────────────────────────────────────────────────────────────────
+
+const MONO: React.CSSProperties = { fontFamily: "'IBM Plex Mono', 'Fira Code', monospace" };
 
 function extractErrorMessage(err: unknown): string {
   if (!err) return 'An unknown error occurred';
@@ -27,92 +127,229 @@ function extractErrorMessage(err: unknown): string {
   if (e?.response?.data) {
     const d = e.response.data;
     if (Array.isArray(d?.detail))
-      return d.detail
-        .map((x: any) => {
-          const field = Array.isArray(x.loc) ? x.loc.join(' → ') : '';
-          return field ? `${field}: ${x.msg}` : x.msg;
-        })
-        .join('\n');
-    if (typeof d?.detail === 'string') return d.detail;
+      return d.detail.map((x: any) => {
+        const f = Array.isArray(x.loc) ? x.loc.join(' → ') : '';
+        return f ? `${f}: ${x.msg}` : x.msg;
+      }).join('\n');
+    if (typeof d?.detail  === 'string') return d.detail;
     if (typeof d?.message === 'string') return d.message;
-    if (typeof d === 'string') return d;
+    if (typeof d          === 'string') return d;
   }
   if (err instanceof Error) return err.message;
   return 'Failed to create scan';
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// FIELD RENDERERS
+// ICONS
 // ─────────────────────────────────────────────────────────────────────────────
 
-function SelectFieldRenderer({
-  field,
-  value,
-  onChange,
-}: {
-  field: SelectField;
-  value: string;
-  onChange: (val: string) => void;
+const PlayIcon = () => (
+  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+    <polygon points="5 3 19 12 5 21 5 3" />
+  </svg>
+);
+const BackIcon = () => (
+  <svg width="9" height="9" viewBox="0 0 10 10" fill="none">
+    <path d="M6 2L3 5l3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+const SunIcon = () => (
+  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+    <circle cx="12" cy="12" r="5" />
+    <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
+  </svg>
+);
+const MoonIcon = () => (
+  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+    <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
+  </svg>
+);
+const CheckIcon = () => (
+  <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+    <path d="M1 4l2 2 4-4" stroke="var(--bg-base)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+const EmptyIcon = () => (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="2" y="3" width="20" height="14" rx="2" /><path d="M8 21h8M12 17v4" />
+  </svg>
+);
+const ErrIcon = () => (
+  <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
+    <circle cx="6" cy="6" r="5" stroke="currentColor" strokeWidth="1.2" />
+    <path d="M6 4v2.2M6 7.8h.01" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+  </svg>
+);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SMALL PIECES
+// ─────────────────────────────────────────────────────────────────────────────
+
+function PillBtn({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
+  const [hov, setHov] = useState(false);
+  return (
+    <button type="button" onClick={onClick}
+      onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+      style={{
+        height: 26, padding: '0 11px',
+        display: 'inline-flex', alignItems: 'center', gap: 5,
+        border: `1px solid ${hov ? 'var(--border-strong)' : 'var(--border-default)'}`,
+        borderRadius: 5,
+        background: hov ? 'var(--bg-hover)' : 'transparent',
+        ...MONO, fontSize: 10,
+        color: hov ? 'var(--text-secondary)' : 'var(--text-muted)',
+        cursor: 'pointer', transition: 'all .13s', whiteSpace: 'nowrap' as const,
+      }}>
+      {children}
+    </button>
+  );
+}
+
+function SelectBadge({ count }: { count: number }) {
+  const on = count > 0;
+  return (
+    <span style={{
+      ...MONO, fontSize: 10, fontWeight: 700,
+      minWidth: 22, height: 20,
+      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+      padding: '0 6px', borderRadius: 4, transition: 'all .2s',
+      color:      on ? 'var(--accent)'        : 'var(--text-ghost)',
+      background: on ? 'var(--accent-dim)'    : 'transparent',
+      border: `1px solid ${on ? 'var(--accent-border)' : 'var(--border-default)'}`,
+    }}>
+      {count}
+    </span>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TOOL ROW
+// ─────────────────────────────────────────────────────────────────────────────
+
+function ToolRow({ tool, selected, active, modified, onCheck, onOpen }: {
+  tool: ToolDefinition; selected: boolean; active: boolean; modified: boolean;
+  onCheck: () => void; onOpen: () => void;
+}) {
+  const [hov, setHov] = useState(false);
+  return (
+    <div
+      className={`sf-tr${active ? ' sf-active' : ''}`}
+      onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+      style={{
+        display: 'flex', alignItems: 'center', gap: 9,
+        padding: '9px 10px 9px 12px', borderRadius: 6,
+        border: `1px solid ${active ? 'var(--border-default)' : 'transparent'}`,
+        background: active || hov ? 'var(--bg-hover)' : 'transparent',
+        transition: 'all .12s', cursor: 'pointer', userSelect: 'none',
+        ['--sf-tc' as any]: tool.color,
+      }}
+    >
+      {/* Checkbox */}
+      <div onClick={e => { e.stopPropagation(); onCheck(); }}
+        style={{
+          width: 15, height: 15, borderRadius: 3, flexShrink: 0,
+          border: `1.5px solid ${selected ? tool.color : 'var(--border-strong)'}`,
+          background: selected ? tool.color : 'transparent',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          transition: 'all .13s',
+        }}>
+        {selected && <CheckIcon />}
+      </div>
+
+      {/* Label */}
+      <div style={{ flex: 1, minWidth: 0 }} onClick={onOpen}>
+        <p style={{
+          fontSize: 12, fontWeight: 600,
+          color: selected ? tool.color : 'var(--text-secondary)',
+          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+          transition: 'color .13s',
+        }}>
+          {tool.label}
+        </p>
+        <p style={{
+          ...MONO, fontSize: 9, color: 'var(--text-faint)', marginTop: 2,
+          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+        }}>
+          {tool.desc}
+        </p>
+      </div>
+
+      {/* Right indicators */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+        {modified && (
+          <div style={{ width: 4, height: 4, borderRadius: '50%', background: 'var(--accent)' }} />
+        )}
+        {selected && (
+          <span style={{
+            ...MONO, fontSize: 12,
+            color: active ? 'var(--accent)' : 'var(--text-faint)',
+            opacity: 1, transition: 'color .13s',
+          }}>›</span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FIELD COMPONENTS
+// ─────────────────────────────────────────────────────────────────────────────
+
+function SelectField_({ field, value, onChange }: {
+  field: SelectField; value: string; onChange: (v: string) => void;
 }) {
   return (
     <div>
-      <p style={{ ...mono, fontSize: 9, letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 10 }}>
-        {field.label}
-      </p>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+      <div className="sf-field-label">{field.label}</div>
+      <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 3 }}>
         {field.choices.map(choice => {
-          const selected = value === choice.value;
+          const on = value === choice.value;
           return (
-            <div
-              key={choice.value}
-              onClick={() => onChange(choice.value)}
+            <div key={choice.value} onClick={() => onChange(choice.value)}
+              className="sf-choice"
               style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 10,
-                padding: '9px 12px',
-                borderRadius: 3,
-                border: `1px solid ${selected ? 'var(--border-strong)' : 'var(--border-default)'}`,
-                background: selected ? 'var(--bg-hover)' : 'transparent',
-                cursor: 'pointer',
-                transition: 'all 0.12s',
-              }}
-            >
-              {/* Radio dot */}
-              <div style={{
-                width: 12, height: 12, borderRadius: '50%', flexShrink: 0,
-                border: `1px solid ${selected ? 'var(--accent)' : 'var(--border-strong)'}`,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                display: 'flex', alignItems: 'flex-start', gap: 12,
+                padding: '10px 14px', borderRadius: 6,
+                border: `1px solid ${on ? 'var(--border-choice-on)' : 'var(--border-choice)'}`,
+                background: on ? 'var(--bg-choice-on)' : 'var(--bg-choice)',
+                boxShadow: on ? 'inset 0 0 0 1px var(--border-default)' : 'none',
+                cursor: 'pointer', transition: 'all .11s',
               }}>
-                {selected && (
-                  <div style={{ width: 5, height: 5, borderRadius: '50%', background: 'var(--accent)' }} />
-                )}
+              {/* Radio */}
+              <div style={{
+                width: 14, height: 14, borderRadius: '50%', flexShrink: 0, marginTop: 2,
+                border: `1.5px solid ${on ? 'var(--accent)' : 'var(--border-strong)'}`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                transition: 'border-color .13s',
+              }}>
+                {on && <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--accent)' }} />}
               </div>
-
-              {/* Text */}
+              {/* Body */}
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: 11, fontWeight: 600, color: selected ? 'var(--text-primary)' : 'var(--text-secondary)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' as const, marginBottom: 2 }}>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: on ? 'var(--text-primary)' : 'var(--text-secondary)', transition: 'color .11s' }}>
                     {choice.label}
                   </span>
                   {choice.requiresNote && (
                     <span style={{
-                      ...mono, fontSize: 9, padding: '1px 5px', borderRadius: 2,
+                      ...MONO, fontSize: 9, padding: '1px 6px', borderRadius: 3,
                       color: 'var(--warn)', background: 'var(--warn-dim)',
-                      border: '1px solid rgba(255,170,0,0.2)',
+                      border: '1px solid rgba(255,170,0,.15)',
                     }}>
                       {choice.requiresNote}
                     </span>
                   )}
-                  <span style={{ ...mono, fontSize: 10, color: 'var(--text-faint)' }}>{choice.desc}</span>
                 </div>
+                <p style={{ ...MONO, fontSize: 9, color: 'var(--text-faint)', lineHeight: 1.5 }}>
+                  {choice.desc}
+                </p>
               </div>
-
-              {/* Time badge */}
+              {/* Time */}
               <span style={{
-                ...mono, fontSize: 10, padding: '2px 8px', borderRadius: 2, flexShrink: 0, marginLeft: 'auto',
-                color: 'var(--text-faint)', background: 'var(--bg-base)',
+                ...MONO, fontSize: 9, padding: '2px 8px', borderRadius: 4,
+                color: 'var(--text-faint)', background: 'var(--bg-deep)',
                 border: '1px solid var(--border-default)',
+                flexShrink: 0, marginTop: 1, whiteSpace: 'nowrap' as const,
               }}>
                 {choice.time}
               </span>
@@ -124,116 +361,203 @@ function SelectFieldRenderer({
   );
 }
 
-function ToggleFieldRenderer({
-  field,
-  value,
-  onChange,
-}: {
-  field: ToggleField;
-  value: boolean;
-  onChange: (val: boolean) => void;
+function ToggleField_({ field, value, onChange }: {
+  field: ToggleField; value: boolean; onChange: (v: boolean) => void;
 }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 20 }}>
       <div>
-        <p style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>{field.label}</p>
-        <p style={{ ...mono, fontSize: 10, color: 'var(--text-faint)', marginTop: 2 }}>{field.desc}</p>
+        <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>{field.label}</p>
+        <p style={{ ...MONO, fontSize: 10, color: 'var(--text-faint)', lineHeight: 1.6 }}>{field.desc}</p>
       </div>
-      <button
-        type="button"
-        onClick={() => onChange(!value)}
-        style={{
-          position: 'relative', width: 36, height: 20, borderRadius: 10, flexShrink: 0,
-          border: `1px solid ${value ? 'var(--accent-border)' : 'var(--border-strong)'}`,
-          background: value ? 'var(--accent-dim)' : 'var(--bg-base)',
-          cursor: 'pointer', transition: 'all 0.2s',
-        }}
-      >
+      <button type="button" onClick={() => onChange(!value)} style={{
+        position: 'relative', width: 40, height: 22, borderRadius: 11, flexShrink: 0,
+        background: value ? 'var(--accent-dim)' : 'var(--bg-deep)',
+        border: `1px solid ${value ? 'var(--accent-border)' : 'var(--border-strong)'}`,
+        cursor: 'pointer', transition: 'all .22s',
+      }}>
         <span style={{
           position: 'absolute', top: 2,
-          left: value ? 'calc(100% - 16px)' : 2,
-          width: 14, height: 14, borderRadius: '50%',
+          left: value ? 'calc(100% - 18px)' : 2,
+          width: 16, height: 16, borderRadius: '50%',
           background: value ? 'var(--accent)' : 'var(--border-strong)',
-          transition: 'all 0.2s',
+          boxShadow: '0 1px 2px rgba(0,0,0,.4)',
+          transition: 'all .22s',
         }} />
       </button>
     </div>
   );
 }
 
-function NumberFieldRenderer({
-  field,
-  value,
-  onChange,
-}: {
-  field: NumberField;
-  value: number;
-  onChange: (val: number) => void;
+function NumberField_({ field, value, onChange }: {
+  field: NumberField; value: number; onChange: (v: number) => void;
 }) {
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-        <p style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>{field.label}</p>
-        <span style={{ ...mono, fontSize: 12, fontWeight: 700, color: 'var(--accent)' }}>{value}</span>
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 4 }}>
+        <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)' }}>{field.label}</p>
+        <span style={{ ...MONO, fontSize: 16, fontWeight: 700, color: 'var(--accent)', letterSpacing: '-.02em' }}>{value}</span>
       </div>
-      <p style={{ ...mono, fontSize: 10, color: 'var(--text-faint)', marginBottom: 10 }}>{field.desc}</p>
-      <input
-        type="range"
-        min={field.min}
-        max={field.max}
-        value={value}
+      <p style={{ ...MONO, fontSize: 10, color: 'var(--text-faint)', marginBottom: 14, lineHeight: 1.6 }}>{field.desc}</p>
+      <input type="range" min={field.min} max={field.max} value={value}
         onChange={e => onChange(parseInt(e.target.value, 10))}
-        style={{ width: '100%', accentColor: 'var(--accent)' }}
-      />
-      <div style={{ display: 'flex', justifyContent: 'space-between', ...mono, fontSize: 10, color: 'var(--text-faint)', marginTop: 6 }}>
-        <span>{field.min}</span>
-        <span>{field.max}</span>
+        style={{ width: '100%', height: 3, background: 'var(--border-strong)', borderRadius: 2, outline: 'none', accentColor: 'var(--accent)' }} />
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, ...MONO, fontSize: 9, color: 'var(--text-faint)' }}>
+        <span>{field.min}</span><span>{field.max}</span>
       </div>
     </div>
   );
 }
 
-function FieldRenderer({
-  field,
-  value,
-  onChange,
-}: {
-  field: ToolOptionField;
-  value: any;
-  onChange: (key: string, val: any) => void;
+function FieldView({ field, value, onChange }: {
+  field: ToolOptionField; value: any; onChange: (k: string, v: any) => void;
 }) {
-  if (field.type === 'select')
-    return <SelectFieldRenderer field={field} value={value} onChange={v => onChange(field.key, v)} />;
-  if (field.type === 'toggle')
-    return <ToggleFieldRenderer field={field} value={value} onChange={v => onChange(field.key, v)} />;
-  if (field.type === 'number')
-    return <NumberFieldRenderer field={field} value={value} onChange={v => onChange(field.key, v)} />;
+  if (field.type === 'select') return <SelectField_ field={field} value={value} onChange={v => onChange(field.key, v)} />;
+  if (field.type === 'toggle') return <ToggleField_ field={field} value={value} onChange={v => onChange(field.key, v)} />;
+  if (field.type === 'number') return <NumberField_ field={field} value={value} onChange={v => onChange(field.key, v)} />;
   return null;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// NON-DEFAULT OPTION BADGES
+// CONFIG PANEL
 // ─────────────────────────────────────────────────────────────────────────────
 
-function OptionBadges({ tool, options }: { tool: ToolDefinition; options: Record<string, any> }) {
-  const nonDefaults = tool.fields.filter(f => options[f.key] !== undefined && options[f.key] !== f.default);
-  if (!nonDefaults.length) return null;
+function ConfigEmpty() {
   return (
-    <>
-      {nonDefaults.map(f => {
-        const val = options[f.key];
-        const display = f.type === 'toggle' ? (val ? f.label : `no ${f.label}`) : String(val);
-        return (
-          <span key={f.key} style={{
-            ...mono, fontSize: 10, padding: '2px 7px', borderRadius: 2,
-            color: 'var(--accent)', background: 'var(--accent-dim)',
-            border: '1px solid var(--accent-border)',
+    <div style={{
+      flex: 1, display: 'flex', flexDirection: 'column' as const,
+      alignItems: 'center', justifyContent: 'center',
+      gap: 12, padding: 48, textAlign: 'center',
+    }}>
+      <div style={{
+        width: 54, height: 54, borderRadius: 14,
+        background: 'var(--bg-card)', border: '1px solid var(--border-default)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        color: 'var(--text-faint)', marginBottom: 6,
+      }}>
+        <EmptyIcon />
+      </div>
+      <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-muted)' }}>No tool selected</p>
+      <p style={{ ...MONO, fontSize: 10, color: 'var(--text-faint)', lineHeight: 1.7 }}>
+        Click a tool on the left<br />to view and configure its options
+      </p>
+    </div>
+  );
+}
+
+function ConfigContent({ tool, options, onFieldChange, nonDefaultCount }: {
+  tool: ToolDefinition;
+  options: Record<string, any>;
+  onFieldChange: (k: string, v: any) => void;
+  nonDefaultCount: number;
+}) {
+  return (
+    <div key={tool.id} className="sf-slide" style={{ flex: 1, overflowY: 'auto' as const, display: 'flex', flexDirection: 'column' as const }}>
+
+      {/* ── Hero header ── */}
+      <div style={{
+        flexShrink: 0, padding: '22px 28px 20px',
+        background: 'var(--bg-card)',
+        borderBottom: '1px solid var(--border-default)',
+        position: 'relative', overflow: 'hidden',
+      }}>
+        {/* ambient glow */}
+        <div style={{
+          position: 'absolute', top: -40, right: -40,
+          width: 180, height: 180, borderRadius: '50%',
+          background: tool.color,
+          opacity: .04, filter: 'blur(40px)',
+          pointerEvents: 'none',
+        }} />
+
+        {/* title row */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+          <div style={{
+            width: 10, height: 10, borderRadius: '50%',
+            background: tool.color,
+            boxShadow: `0 0 10px ${tool.color}66`,
+            flexShrink: 0,
+          }} />
+          <h2 style={{ fontSize: 20, fontWeight: 800, letterSpacing: '-.03em', color: tool.color }}>
+            {tool.label}
+          </h2>
+        </div>
+        <p style={{ ...MONO, fontSize: 10, color: 'var(--text-muted)', lineHeight: 1.6, marginBottom: 12 }}>
+          {tool.desc}
+        </p>
+
+        {/* meta tags */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' as const }}>
+          <span style={{
+            ...MONO, fontSize: 9, padding: '3px 8px', borderRadius: 4,
+            color: 'var(--text-muted)', background: 'var(--bg-hover)',
+            border: '1px solid var(--border-default)',
+            display: 'inline-flex', alignItems: 'center', gap: 4,
           }}>
-            {display}
+            {tool.fields.length} option{tool.fields.length !== 1 ? 's' : ''}
           </span>
-        );
-      })}
-    </>
+          {nonDefaultCount > 0 && (
+            <span style={{
+              ...MONO, fontSize: 9, padding: '3px 8px', borderRadius: 4,
+              color: 'var(--accent)', background: 'var(--accent-dim)',
+              border: '1px solid var(--accent-border)',
+              display: 'inline-flex', alignItems: 'center', gap: 4,
+            }}>
+              ✦ {nonDefaultCount} customised
+            </span>
+          )}
+          {tool.fields.length === 0 && (
+            <span style={{
+              ...MONO, fontSize: 9, padding: '3px 8px', borderRadius: 4,
+              color: 'var(--text-muted)', background: 'var(--bg-hover)',
+              border: '1px solid var(--border-default)',
+            }}>
+              defaults only
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* ── Fields ── */}
+      <div style={{ padding: '24px 28px', display: 'flex', flexDirection: 'column' as const, gap: 0 }}>
+        {tool.fields.length > 0 ? (
+          tool.fields.map((field, i) => (
+            <div key={field.key} style={{
+              padding: `${i === 0 ? 0 : 20}px 0 20px`,
+              borderBottom: i < tool.fields.length - 1 ? '1px solid var(--border-default)' : 'none',
+            }}>
+              <FieldView
+                field={field}
+                value={options[field.key] !== undefined ? options[field.key] : field.default}
+                onChange={onFieldChange}
+              />
+            </div>
+          ))
+        ) : (
+          <div style={{
+            display: 'flex', alignItems: 'flex-start', gap: 14,
+            padding: '18px 20px', borderRadius: 8,
+            background: 'var(--bg-choice)', border: '1px solid var(--border-choice)',
+          }}>
+            <div style={{
+              width: 34, height: 34, borderRadius: 8, flexShrink: 0,
+              background: 'var(--accent-dim)', border: '1px solid var(--accent-border)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: 'var(--accent)', fontSize: 14,
+            }}>✓</div>
+            <div>
+              <p style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>
+                Runs with default settings
+              </p>
+              <p style={{ ...MONO, fontSize: 10, color: 'var(--text-faint)', lineHeight: 1.7 }}>
+                {tool.label} requires no configuration.<br />
+                Select it and launch — it uses optimal defaults automatically.
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -243,359 +567,251 @@ function OptionBadges({ tool, options }: { tool: ToolDefinition; options: Record
 
 export default function ScanForm() {
   const router = useRouter();
+  const { theme, toggleTheme } = useTheme();
 
-  const [target, setTarget]           = useState('');
-  const [selectedTools, setSelected]  = useState<string[]>([]);
-  const [options, setOptions]         = useState<Record<string, Record<string, any>>>({});
-  const [activePanel, setActivePanel] = useState<string | null>(null); // accordion
-  const [loading, setLoading]         = useState(false);
-  const [error, setError]             = useState<string | null>(null);
+  const [target,    setTarget]    = useState('');
+  const [selected,  setSelected]  = useState<string[]>([]);
+  const [options,   setOptions]   = useState<Record<string, Record<string, any>>>({});
+  const [activeTab, setActiveTab] = useState<string | null>(null);
+  const [loading,   setLoading]   = useState(false);
+  const [error,     setError]     = useState<string | null>(null);
 
-  // ── Tool toggle ──────────────────────────────────────────────────────────
-  const toggleTool = (id: string) => {
-    if (selectedTools.includes(id)) {
-      // Deselect — clear options + close panel
-      setSelected(prev => prev.filter(t => t !== id));
-      setOptions(prev => { const c = { ...prev }; delete c[id]; return c; });
-      if (activePanel === id) setActivePanel(null);
-    } else {
-      // Select — open this panel, close others (accordion)
-      setSelected(prev => [...prev, id]);
-      setActivePanel(id);
-    }
-  };
+  const isSelected   = (id: string) => selected.includes(id);
+  const canLaunch    = !loading && !!target.trim() && selected.length > 0;
 
-  // ── Panel header click — accordion: open this, close others ─────────────
-  const togglePanel = (id: string) => {
-    setActivePanel(prev => (prev === id ? null : id));
-  };
+  const getNonDefaults = useCallback((id: string) => {
+    const tool = getTool(id);
+    const opts = options[id] ?? {};
+    if (!tool) return 0;
+    return tool.fields.filter(f => opts[f.key] !== undefined && opts[f.key] !== f.default).length;
+  }, [options]);
 
-  // ── Field change ─────────────────────────────────────────────────────────
-  const handleFieldChange = (toolId: string, key: string, val: any) => {
+  const handleCheck = useCallback((id: string) => {
+    setSelected(prev => {
+      if (prev.includes(id)) {
+        const next = prev.filter(t => t !== id);
+        setOptions(o => { const c = { ...o }; delete c[id]; return c; });
+        setActiveTab(at => at === id ? (next[next.length - 1] ?? null) : at);
+        return next;
+      }
+      setActiveTab(id);
+      return [...prev, id];
+    });
+  }, []);
+
+  const handleOpen = useCallback((id: string) => {
+    if (!selected.includes(id)) setSelected(p => [...p, id]);
+    setActiveTab(id);
+  }, [selected]);
+
+  const handleFieldChange = useCallback((toolId: string, key: string, val: any) => {
     setOptions(prev => ({
       ...prev,
       [toolId]: { ...(prev[toolId] ?? getToolDefaults(toolId)), [key]: val },
     }));
-  };
+  }, []);
 
-  // ── Submit ───────────────────────────────────────────────────────────────
-  const handleSubmit = async (e?: React.FormEvent) => {
-    e?.preventDefault();
+  const handleSubmit = async () => {
     setError(null);
-    if (!target.trim())        { setError('Please enter a target domain or IP.'); return; }
-    if (!selectedTools.length) { setError('Please select at least one tool.');    return; }
-
+    if (!target.trim()) { setError('Enter a target domain or IP address.'); return; }
+    if (!selected.length) { setError('Select at least one tool.'); return; }
     setLoading(true);
     try {
-      const filteredOptions: Record<string, any> = {};
-      for (const toolId of selectedTools) {
-        const toolOpts = options[toolId];
-        if (toolOpts && Object.keys(toolOpts).length > 0) filteredOptions[toolId] = toolOpts;
+      const filtered: Record<string, any> = {};
+      for (const id of selected) {
+        const o = options[id];
+        if (o && Object.keys(o).length) filtered[id] = o;
       }
-      const response = await apiClient.post('/api/v1/scans', {
-        target: target.trim(),
-        tools:  selectedTools,
-        ...(Object.keys(filteredOptions).length > 0 ? { options: filteredOptions } : {}),
+      const res = await apiClient.post('/api/v1/scans', {
+        target: target.trim(), tools: selected,
+        ...(Object.keys(filtered).length ? { options: filtered } : {}),
       });
-      const scanId = response.data?.scan_id ?? response.data?.id;
-      router.push(scanId ? `/dashboard/scans/${scanId}` : '/dashboard/scans');
-    } catch (err) {
-      setError(extractErrorMessage(err));
+      const sid = res.data?.scan_id ?? res.data?.id;
+      router.push(sid ? `/dashboard/scans/${sid}` : '/dashboard/scans');
+    } catch (e) {
+      setError(extractErrorMessage(e));
     } finally {
       setLoading(false);
     }
   };
 
-  const canSubmit = !loading && !!target.trim() && selectedTools.length > 0;
+  const activeToolDef = activeTab ? (getTool(activeTab) ?? null) : null;
+  const activeOpts    = activeTab ? (options[activeTab] ?? {}) : {};
+  const showConfig    = activeToolDef && isSelected(activeToolDef.id);
 
   return (
-    <div style={{ minHeight: '100vh', position: 'relative' }}>
+    <>
+      <style>{GLOBAL_CSS}</style>
 
-      {/* ── Top bar ───────────────────────────────────────────────────────── */}
-      <div style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '16px 32px',
-        borderBottom: '1px solid var(--border-default)',
-        background: 'var(--bg-card)',
-      }}>
-        <span style={{ ...mono, fontSize: 13, fontWeight: 700, color: 'var(--accent)' }}>
-          pen<span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>toolkit</span>
-        </span>
-        <Link href="/dashboard/scans" style={{ ...mono, fontSize: 11, color: 'var(--text-muted)', textDecoration: 'none' }}>
-          ← scans
-        </Link>
-      </div>
+      <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', background: 'var(--bg-base)' }}>
 
-      {/* ── Hero: centered target input ───────────────────────────────────── */}
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '64px 24px 0', textAlign: 'center' }}>
-        <p style={{ ...mono, fontSize: 10, letterSpacing: '0.2em', textTransform: 'uppercase', color: 'var(--accent)', marginBottom: 14 }}>
-          New Scan
-        </p>
-        <h1 style={{ fontSize: 38, fontWeight: 700, letterSpacing: '-0.03em', color: 'var(--text-primary)', marginBottom: 8 }}>
-          Where do we{' '}
-          <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>probe?</span>
-        </h1>
-        <p style={{ ...mono, fontSize: 12, color: 'var(--text-muted)', marginBottom: 36 }}>
-          Enter a target, pick your tools, launch.
-        </p>
-
-        {/* Target input box */}
-        <div style={{ width: '100%', maxWidth: 620 }}>
-          <div style={{
-            display: 'flex', alignItems: 'center',
-            background: 'var(--bg-card)',
-            border: '1px solid var(--border-strong)',
-            borderRadius: 6,
-            overflow: 'hidden',
-            transition: 'box-shadow 0.2s',
-          }}>
-            <span style={{ ...mono, fontSize: 16, color: 'var(--accent)', padding: '0 12px 0 18px', userSelect: 'none' }}>▸</span>
-            <input
-              type="text"
-              value={target}
-              onChange={e => setTarget(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && handleSubmit()}
-              placeholder="example.com  or  192.168.1.1"
-              disabled={loading}
-              autoFocus
-              style={{
-                ...mono, flex: 1, background: 'transparent', border: 'none', outline: 'none',
-                fontSize: 15, color: 'var(--text-primary)', padding: '17px 0',
-              }}
-            />
-            <button
-              type="button"
-              onClick={handleSubmit}
-              disabled={!canSubmit}
-              style={{
-                ...mono, margin: 7, padding: '10px 20px',
-                background: 'var(--accent-dim)',
-                border: '1px solid var(--accent-border)',
-                borderRadius: 4,
-                fontSize: 11, fontWeight: 700, letterSpacing: '0.08em',
-                color: 'var(--accent)', cursor: canSubmit ? 'pointer' : 'not-allowed',
-                opacity: canSubmit ? 1 : 0.35,
-                transition: 'all 0.15s', whiteSpace: 'nowrap',
-              }}
-            >
-              {loading ? 'Starting…' : 'Launch →'}
-            </button>
-          </div>
-
-          {/* Quick fills */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
-            <span style={{ ...mono, fontSize: 10, color: 'var(--text-faint)' }}>try:</span>
-            {['localhost', '127.0.0.1'].map(s => (
-              <button
-                key={s}
-                type="button"
-                onClick={() => setTarget(s)}
-                style={{
-                  ...mono, fontSize: 11, color: 'var(--text-muted)',
-                  background: 'transparent', border: '1px solid var(--border-default)',
-                  borderRadius: 3, padding: '3px 10px', cursor: 'pointer', transition: 'all 0.15s',
-                }}
-              >
-                {s}
-              </button>
-            ))}
-          </div>
-
-          {/* Error */}
-          {error && (
-            <p style={{ ...mono, fontSize: 11, color: 'var(--danger)', marginTop: 10 }}>✗ {error}</p>
-          )}
-        </div>
-      </div>
-
-      {/* ── Tools section ─────────────────────────────────────────────────── */}
-      <div style={{ maxWidth: 860, margin: '52px auto 120px', padding: '0 24px' }}>
-
-        {/* Section header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-          <p style={{ ...mono, fontSize: 10, letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>
-            Select tools
-          </p>
-          <div style={{ display: 'flex', gap: 12 }}>
-            <button type="button" onClick={() => setSelected(TOOLS.map(t => t.id))}
-              style={{ ...mono, fontSize: 10, color: 'var(--accent)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
-              select all
-            </button>
-            <span style={{ color: 'var(--text-faint)', fontSize: 10 }}>·</span>
-            <button type="button" onClick={() => { setSelected([]); setOptions({}); setActivePanel(null); }}
-              style={{ ...mono, fontSize: 10, color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
-              clear
-            </button>
-          </div>
-        </div>
-
-        {/* Tool chips grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(185px, 1fr))', gap: 8, marginBottom: 8 }}>
-          {TOOLS.map(tool => {
-            const isSelected = selectedTools.includes(tool.id);
-            return (
-              <div
-                key={tool.id}
-                onClick={() => toggleTool(tool.id)}
-                style={{
-                  display: 'flex', alignItems: 'flex-start', gap: 10,
-                  padding: '13px 15px',
-                  background: isSelected ? 'var(--bg-hover)' : 'var(--bg-card)',
-                  border: `1px solid ${isSelected ? tool.color + '33' : 'var(--border-default)'}`,
-                  borderRadius: 4, cursor: 'pointer', transition: 'all 0.15s',
-                  userSelect: 'none',
-                }}
-              >
-                {/* Checkbox */}
-                <div style={{
-                  width: 15, height: 15, borderRadius: 2, flexShrink: 0, marginTop: 1,
-                  border: `1px solid ${isSelected ? tool.color : 'var(--border-strong)'}`,
-                  background: isSelected ? tool.color : 'transparent',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  transition: 'all 0.15s',
-                }}>
-                  {isSelected && (
-                    <svg width="9" height="9" viewBox="0 0 9 9" fill="none">
-                      <path d="M1.5 4.5l2 2 4-4" stroke="var(--bg-base)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  )}
-                </div>
-                {/* Info */}
-                <div>
-                  <p style={{ fontSize: 13, fontWeight: 600, color: isSelected ? tool.color : 'var(--text-secondary)', marginBottom: 2 }}>
-                    {tool.label}
-                  </p>
-                  <p style={{ ...mono, fontSize: 10, color: 'var(--text-faint)', lineHeight: 1.5 }}>{tool.desc}</p>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Accordion: one config panel at a time */}
-        {selectedTools.length > 0 && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 8 }}>
-            {TOOLS.filter(t => selectedTools.includes(t.id)).map(tool => {
-              const isOpen = activePanel === tool.id;
-              const opts   = options[tool.id] ?? {};
-
-              return (
-                <div
-                  key={tool.id}
-                  style={{
-                    background: 'var(--bg-card)',
-                    border: `1px solid ${isOpen ? tool.color + '44' : 'var(--border-default)'}`,
-                    borderRadius: 4, overflow: 'hidden', transition: 'border-color 0.15s',
-                  }}
-                >
-                  {/* Panel header — click to accordion-open */}
-                  <div
-                    onClick={() => togglePanel(tool.id)}
-                    style={{
-                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                      padding: '12px 16px',
-                      borderBottom: isOpen ? '1px solid var(--border-default)' : 'none',
-                      cursor: 'pointer', transition: 'background 0.12s',
-                      background: isOpen ? 'rgba(255,255,255,0.015)' : 'transparent',
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <div style={{ width: 6, height: 6, borderRadius: '50%', background: tool.color, flexShrink: 0 }} />
-                      <div>
-                        <p style={{ fontSize: 12, fontWeight: 600, color: tool.color }}>{tool.label}</p>
-                        <p style={{ ...mono, fontSize: 10, color: 'var(--text-faint)' }}>{tool.desc}</p>
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <OptionBadges tool={tool} options={opts} />
-                      <span style={{
-                        ...mono, fontSize: 10, color: 'var(--text-faint)',
-                        transition: 'transform 0.2s',
-                        display: 'inline-block',
-                        transform: isOpen ? 'rotate(0deg)' : 'rotate(-90deg)',
-                      }}>▾</span>
-                    </div>
-                  </div>
-
-                  {/* Panel body — only rendered when open */}
-                  {isOpen && (
-                    <div style={{ padding: '20px 20px 24px' }}>
-                      {tool.fields.length > 0 ? (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-                          {tool.fields.map((field, i) => (
-                            <div key={field.key}>
-                              {i > 0 && <div style={{ borderTop: '1px solid var(--border-default)', marginBottom: 20 }} />}
-                              <FieldRenderer
-                                field={field}
-                                value={opts[field.key] ?? field.default}
-                                onChange={(key, val) => handleFieldChange(tool.id, key, val)}
-                              />
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <p style={{ ...mono, fontSize: 11, color: 'var(--text-faint)', fontStyle: 'italic' }}>
-                          No configurable options — runs with defaults.
-                        </p>
-                      )}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      {/* ── Sticky bottom bar ─────────────────────────────────────────────── */}
-      {(target.trim() || selectedTools.length > 0) && (
+        {/* ── TOPBAR ─────────────────────────────────────────────── */}
         <div style={{
-          position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 100,
-          background: 'rgba(8,8,8,0.92)',
-          backdropFilter: 'blur(12px)',
-          borderTop: '1px solid var(--border-default)',
-          padding: '14px 32px',
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16,
+          height: 44, flexShrink: 0, zIndex: 40,
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '0 16px',
+          background: 'var(--bg-card)',
+          borderBottom: '1px solid var(--border-default)',
         }}>
-          <div style={{ ...mono, fontSize: 12, display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
-            <span style={{ color: 'var(--accent)', fontWeight: 600 }}>{target || '—'}</span>
-            <span style={{ color: 'var(--text-faint)' }}>·</span>
-            <span style={{ color: 'var(--text-muted)' }}>
-              {selectedTools.length > 0 ? selectedTools.join(', ') : 'no tools selected'}
-            </span>
+          {/* Breadcrumb */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5, ...MONO, fontSize: 11 }}>
+            <span style={{ color: 'var(--accent)', fontWeight: 700, letterSpacing: '.02em' }}>pentoolkit</span>
+            <span style={{ color: 'var(--text-faint)' }}>/</span>
+            <span style={{ color: 'var(--text-muted)' }}>new scan</span>
           </div>
-          <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexShrink: 0 }}>
-            <button
-              type="button"
-              onClick={() => router.push('/dashboard/scans')}
-              style={{
-                ...mono, padding: '10px 16px', background: 'transparent',
-                border: '1px solid var(--border-default)', borderRadius: 3,
-                fontSize: 11, color: 'var(--text-muted)', cursor: 'pointer', transition: 'all 0.15s',
-              }}
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={handleSubmit}
-              disabled={!canSubmit}
-              style={{
-                ...mono, padding: '10px 24px',
-                background: 'var(--accent-dim)',
-                border: '1px solid var(--accent-border)',
-                borderRadius: 3,
-                fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase',
-                color: 'var(--accent)', cursor: canSubmit ? 'pointer' : 'not-allowed',
-                opacity: canSubmit ? 1 : 0.35, transition: 'all 0.15s',
-              }}
-            >
-              {loading ? 'Starting…' : '→ Start Scan'}
-            </button>
+          {/* Actions */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <PillBtn onClick={toggleTheme}>
+              {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
+              {theme === 'dark' ? 'Light' : 'Dark'}
+            </PillBtn>
+            <Link href="/dashboard/scans" style={{ textDecoration: 'none' }}>
+              <PillBtn onClick={() => {}}>
+                <BackIcon /> Back to Scans
+              </PillBtn>
+            </Link>
           </div>
         </div>
-      )}
-    </div>
+
+        {/* ── TARGET STRIP ───────────────────────────────────────── */}
+        <div style={{
+          flexShrink: 0, zIndex: 30,
+          background: 'var(--bg-card)',
+          borderBottom: '1px solid var(--border-default)',
+          padding: '16px 20px',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <div style={{ width: '100%', maxWidth: 680, display: 'flex', flexDirection: 'column', gap: 9 }}>
+            <span style={{ ...MONO, fontSize: 9, letterSpacing: '.22em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>
+              Target
+            </span>
+
+            <div style={{ display: 'flex', gap: 8 }}>
+              {/* Input */}
+              <div className="sf-target-box" style={{
+                flex: 1, display: 'flex', alignItems: 'center',
+                background: 'var(--bg-input)',
+                border: '1px solid var(--border-strong)',
+                borderRadius: 7, overflow: 'hidden',
+                transition: 'border-color .15s, box-shadow .15s',
+              }}>
+                <span style={{ ...MONO, fontSize: 14, color: 'var(--accent)', padding: '0 10px 0 14px', userSelect: 'none', lineHeight: 1 }}>▸</span>
+                <input
+                  type="text" value={target} autoFocus disabled={loading}
+                  onChange={e => { setTarget(e.target.value); setError(null); }}
+                  onKeyDown={e => e.key === 'Enter' && handleSubmit()}
+                  placeholder="example.com  ·  192.168.1.1  ·  10.0.0.0/24"
+                  style={{ ...MONO, flex: 1, background: 'transparent', border: 'none', outline: 'none', fontSize: 13, color: 'var(--text-primary)', padding: '12px 14px 12px 0' }}
+                />
+              </div>
+
+              {/* Launch */}
+              <button type="button" className="sf-launch" onClick={handleSubmit} disabled={!canLaunch} style={{
+                display: 'inline-flex', alignItems: 'center', gap: 8,
+                padding: '0 22px', flexShrink: 0,
+                background: 'var(--accent-dim)',
+                border: '1px solid var(--accent-border)',
+                borderRadius: 7,
+                ...MONO, fontSize: 11, fontWeight: 700, letterSpacing: '.06em',
+                color: 'var(--accent)', cursor: canLaunch ? 'pointer' : 'not-allowed',
+                opacity: canLaunch ? 1 : .2, transition: 'all .15s',
+              }}>
+                <PlayIcon />
+                {loading ? 'Launching…' : 'Launch Scan'}
+              </button>
+            </div>
+
+            {/* Hints + error */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' as const }}>
+              <span style={{ ...MONO, fontSize: 10, color: 'var(--text-faint)' }}>Try:</span>
+              {['localhost', '127.0.0.1', '192.168.1.1'].map(q => (
+                <button key={q} type="button" className="sf-hint" onClick={() => { setTarget(q); setError(null); }} style={{
+                  ...MONO, fontSize: 10, color: 'var(--text-muted)',
+                  background: 'transparent', border: '1px solid var(--border-default)',
+                  borderRadius: 4, padding: '2px 8px', cursor: 'pointer', transition: 'all .12s',
+                }}>{q}</button>
+              ))}
+              {error && (
+                <span style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 5,
+                  ...MONO, fontSize: 10, padding: '2px 9px', borderRadius: 4,
+                  color: 'var(--danger)', background: 'var(--danger-dim)', border: '1px solid var(--danger-border)',
+                }}>
+                  <ErrIcon />{error}
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* ── BODY ───────────────────────────────────────────────── */}
+        <div style={{ flex: 1, display: 'flex', overflow: 'hidden', position: 'relative', zIndex: 1 }}>
+
+          {/* LEFT */}
+          <div style={{
+            width: 252, flexShrink: 0,
+            borderRight: '1px solid var(--border-default)',
+            background: 'var(--bg-card)',
+            display: 'flex', flexDirection: 'column', overflow: 'hidden',
+          }}>
+            <div style={{
+              padding: '11px 14px 10px', flexShrink: 0,
+              borderBottom: '1px solid var(--border-default)',
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            }}>
+              <span style={{ ...MONO, fontSize: 9, letterSpacing: '.2em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>Tools</span>
+              <SelectBadge count={selected.length} />
+            </div>
+
+            <div className="sf-scroll" style={{ flex: 1, overflowY: 'auto', padding: 5, display: 'flex', flexDirection: 'column', gap: 1 }}>
+              {TOOLS.map(tool => (
+                <ToolRow
+                  key={tool.id}
+                  tool={tool}
+                  selected={isSelected(tool.id)}
+                  active={activeTab === tool.id}
+                  modified={getNonDefaults(tool.id) > 0}
+                  onCheck={() => handleCheck(tool.id)}
+                  onOpen={() => handleOpen(tool.id)}
+                />
+              ))}
+            </div>
+
+            <div style={{ padding: '9px 14px', flexShrink: 0, borderTop: '1px solid var(--border-default)', display: 'flex', alignItems: 'center', gap: 8 }}>
+              {[
+                { label: 'Select all', g: true, action: () => { setSelected(TOOLS.map(t => t.id)); if (!activeTab) setActiveTab(TOOLS[0].id); } },
+                { label: '·', sep: true },
+                { label: 'Clear', g: false, action: () => { setSelected([]); setOptions({}); setActiveTab(null); } },
+              ].map((item: any, i) =>
+                item.sep ? <span key={i} style={{ ...MONO, fontSize: 10, color: 'var(--text-ghost)' }}>·</span> : (
+                  <button key={i} type="button" onClick={item.action}
+                    onMouseEnter={e => (e.currentTarget.style.color = item.g ? 'var(--accent)' : 'var(--danger)')}
+                    onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-faint)')}
+                    style={{ ...MONO, fontSize: 10, background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: 'var(--text-faint)', transition: 'color .13s' }}>
+                    {item.label}
+                  </button>
+                )
+              )}
+            </div>
+          </div>
+
+          {/* RIGHT */}
+          <div className="sf-scroll" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: 'var(--bg-deep)' }}>
+            {showConfig ? (
+              <ConfigContent
+                tool={activeToolDef!}
+                options={activeOpts}
+                nonDefaultCount={getNonDefaults(activeTab!)}
+                onFieldChange={(k, v) => activeTab && handleFieldChange(activeTab, k, v)}
+              />
+            ) : (
+              <ConfigEmpty />
+            )}
+          </div>
+
+        </div>
+      </div>
+    </>
   );
 }
 
