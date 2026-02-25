@@ -1,249 +1,140 @@
-/* src/styles/themes.css */
-/* 
-  Theme system for Pentoolkit
-  All components should use these CSS variables instead of hardcoded colors.
-  Toggle .theme-light on <html> or <body> to switch themes.
+/* src/styles/themes.css
+   Theme system for Pentoolkit
+   All components must use CSS variables — no hardcoded colors.
+   Toggle .theme-light on <html> to switch themes.
 */
 
-/* ── DARK THEME (default) ─────────────────────────────── */
-/* :root {
-  --bg-base:        #0a0a0a;
-  --bg-card:        #0d0d0d;
-  --bg-hover:       #111111;
-  --bg-input:       #111111;
-
-  --border-default: #1a1a1a;
-  --border-subtle:  #141414;
-  --border-strong:  #2a2a2a;
-
-  --text-primary:   #e0e0e0;
-  --text-secondary: #dad0d0;
-  --text-muted:     #555555;
-  --text-faint:     #333333;
-  --text-ghost:     #2a2a2a;
-
-  --accent:         #00ff88;
-  --accent-dim:     rgba(0, 255, 136, 0.1);
-  --accent-border:  rgba(0, 255, 136, 0.3);
-  --accent-glow:    rgba(0, 255, 136, 0.04);
-
-  --danger:         #ff4444;
-  --danger-dim:     rgba(255, 68, 68, 0.05);
-  --danger-border:  rgba(255, 68, 68, 0.2);
-
-  --warn:           #ffaa00;
-  --warn-dim:       rgba(255, 170, 0, 0.08);
-
-  --info:           #4488ff;
-
-  --severity-critical: #ff4444;
-  --severity-high:     #ff8800;
-  --severity-medium:   #ffaa00;
-  --severity-low:      #88cc00;
-  --severity-info:     #4488ff;
-
-  --grid-line: rgba(0, 255, 136, 0.03);
-  --card-shadow: 0 0 40px rgba(0, 255, 136, 0.04), inset 0 0 40px rgba(0,0,0,0.4);
-} */
-
-/* ── LIGHT THEME ──────────────────────────────────────── */
-/* .theme-light {
-  --bg-base:        #f5f5f0;
-  --bg-card:        #ffffff;
-  --bg-hover:       #f9f9f7;
-  --bg-input:       #fafaf8;
-
-  --border-default: #e0e0d8;
-  --border-subtle:  #ebebea;
-  --border-strong:  #cccccc;
-
-  --text-primary:   #111111;
-  --text-secondary: #444444;
-  --text-muted:     #777777;
-  --text-faint:     #aaaaaa;
-  --text-ghost:     #cccccc;
-
-  --accent:         #008844;
-  --accent-dim:     rgba(0, 136, 68, 0.08);
-  --accent-border:  rgba(0, 136, 68, 0.25);
-  --accent-glow:    rgba(0, 136, 68, 0.03);
-
-  --danger:         #cc2222;
-  --danger-dim:     rgba(204, 34, 34, 0.05);
-  --danger-border:  rgba(204, 34, 34, 0.2);
-
-  --warn:           #cc7700;
-  --warn-dim:       rgba(204, 119, 0, 0.06);
-
-  --info:           #2255cc;
-
-  --severity-critical: #cc2222;
-  --severity-high:     #cc5500;
-  --severity-medium:   #cc7700;
-  --severity-low:      #558800;
-  --severity-info:     #2255cc;
-
-  --grid-line: rgba(0, 136, 68, 0.04);
-  --card-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.04);
-} */
-
-/* ── Apply base bg to html/body ───────────────────────── */
-/* html, body {
-  background-color: var(--bg-base);
-  color: var(--text-primary);
-  transition: background-color 0.2s ease, color 0.2s ease;
-} */
-
-
-
-
-
-/* src/styles/themes.css */
-/* 
-  Theme system for Pentoolkit
-  All components must use CSS variables — no hardcoded colors.
-  Toggle .theme-light on <html> or <body> to switch themes.
-*/
-
-/* ────────────────────────────────────────────────────────── */
-/* ── DARK THEME (default) ───────────────────────────────── */
-/* ────────────────────────────────────────────────────────── */
+/* ═══════════════════════════════════════════════════════════ */
+/* DARK THEME (default)                                        */
+/* ═══════════════════════════════════════════════════════════ */
 
 :root {
-  /* Base backgrounds — softened */
-  --bg-base:        #111315;   /* was #0a0a0a */
-  --bg-card:        #171a1d;   /* was #0d0d0d */
-  --bg-hover:       #1e2226;
-  --bg-input:       #1b1f23;
+  /* ── Page & surface backgrounds ──────────────────────────
+     Key principle: each layer must be visibly distinct.
+     base → card → hover forms a clear 3-step depth stack.   */
+  --bg-base:        #161b22;   /* page bg — deep blue-grey, not pure black     */
+  --bg-card:        #1f2731;   /* card surfaces — clearly lighter than base    */
+  --bg-hover:       #263040;   /* hover / input / nested surfaces              */
+  --bg-input:       #263040;
 
-  /* Borders */
-  --border-default: #242a30;
-  --border-subtle:  #1f2429;
-  --border-strong:  #2e353c;
+  /* ── Borders ─────────────────────────────────────────────
+     3 levels: subtle internal dividers → default → strong   */
+  --border-subtle:  #1e2730;
+  --border-default: #2a3545;   /* main border — visible but not harsh          */
+  --border-strong:  #374656;
 
-  /* Text */
-  --text-primary:   #e6e6e6;
-  /* --text-secondary: #b8c0c7; */
-  --text-secondary: #aab2b9;
-  --text-muted:     #8a939b;
-  --text-faint:     #5c636a;
-  --text-ghost:     #3c4248;
+  /* ── Text ────────────────────────────────────────────────
+     Large contrast gap between primary and faint            */
+  --text-primary:   #e8edf2;   /* headings, important values                   */
+  --text-secondary: #b0bac5;   /* body text, descriptions                      */
+  --text-muted:     #7a8898;   /* labels, secondary info                       */
+  --text-faint:     #4a5668;   /* timestamps, placeholders                     */
+  --text-ghost:     #2e3d50;   /* dividers rendered as text                    */
 
-  /* Accent */
-  /* --accent:         #00ff88; */
-  --accent: #00d97e;
-  --accent-dim:     rgba(0, 255, 136, 0.08);
-  --accent-border:  rgba(0, 255, 136, 0.25);
-  --accent-glow:    rgba(0, 255, 136, 0.06);
+  /* ── Accent (green) ──────────────────────────────────────*/
+  --accent:         #00d97e;
+  --accent-dim:     rgba(0, 217, 126, 0.10);
+  --accent-border:  rgba(0, 217, 126, 0.28);
+  --accent-glow:    rgba(0, 217, 126, 0.06);
 
-  /* Status */
-  --danger:         #ff4d4d;
-  --danger-dim:     rgba(255, 77, 77, 0.06);
-  --danger-border:  rgba(255, 77, 77, 0.25);
+  /* ── Status ──────────────────────────────────────────────*/
+  --danger:         #f25757;
+  --danger-dim:     rgba(242, 87, 87, 0.08);
+  --danger-border:  rgba(242, 87, 87, 0.28);
 
-  --warn:           #ffb020;
-  --warn-dim:       rgba(255, 176, 32, 0.08);
+  --warn:           #f0a500;
+  --warn-dim:       rgba(240, 165, 0, 0.10);
 
-  --info:           #5aa2ff;
+  --info:           #5b9cf6;
 
-  /* Severity */
-  --severity-critical: #ff4d4d;
-  --severity-high:     #ff8800;
-  --severity-medium:   #ffb020;
-  --severity-low:      #88d600;
-  --severity-info:     #5aa2ff;
+  /* ── Severity ────────────────────────────────────────────*/
+  --severity-critical: #f25757;
+  --severity-high:     #f07830;
+  --severity-medium:   #f0a500;
+  --severity-low:      #7ec94a;
+  --severity-info:     #5b9cf6;
 
-  /* Visual effects */
-  --grid-line: rgba(255, 255, 255, 0.03);
-  /* --card-shadow: 0 6px 18px rgba(0,0,0,0.35); */
-  --card-shadow: 0 8px 24px rgba(0,0,0,0.45);
+  /* ── Effects ─────────────────────────────────────────────*/
+  --grid-line:   rgba(255, 255, 255, 0.025);
+  --card-shadow: 0 2px 8px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255,255,255,0.03);
 
-  /* ScanForm depth layers */
-  --bg-deep:        #0d0f11;
-  --bg-raised:      #1c2024;
-
-  --bg-choice:      #1a1e22;
-  --bg-choice-on:   #20252a;
-
-  --border-choice:     #2b3138;
-  --border-choice-on:  #3a424a;
-
-  --accent-soft:    rgba(0, 255, 136, 0.05);
-  --accent-pulse:   rgba(0, 255, 136, 0.12);
-
-  --tool-stripe:    2px;
+  /* ── ScanForm specific ───────────────────────────────────*/
+  --bg-deep:           #0f1318;   /* deepest recessed areas                    */
+  --bg-raised:         #263040;
+  --bg-choice:         #1f2731;
+  --bg-choice-on:      #263040;
+  --border-choice:     #2a3545;
+  --border-choice-on:  #374656;
+  --accent-soft:       rgba(0, 217, 126, 0.05);
+  --accent-pulse:      rgba(0, 217, 126, 0.14);
+  --tool-stripe:       2px;
 }
-/* ────────────────────────────────────────────────────────── */
-/* ── LIGHT THEME ────────────────────────────────────────── */
-/* ────────────────────────────────────────────────────────── */
+
+/* ═══════════════════════════════════════════════════════════ */
+/* LIGHT THEME                                                 */
+/* ═══════════════════════════════════════════════════════════ */
 
 .theme-light {
-  /* Base backgrounds */
-  /* --bg-base:        #f5f5f0;   */
-  --bg-base:        #f4f6f8; 
-  --bg-card:        #ffffff;
-  --bg-hover:       #f9f9f7;
-  --bg-input:       #fafaf8;
+  /* ── Page & surface backgrounds ──────────────────────────*/
+  --bg-base:        #eef1f5;   /* page bg — cool off-white, not pure white     */
+  --bg-card:        #ffffff;   /* cards stand out clearly from base            */
+  --bg-hover:       #f3f6f9;   /* hover / input / nested                       */
+  --bg-input:       #f3f6f9;
 
-  /* Borders */
-  --border-default: #e0e0d8;
-  --border-subtle:  #ebebea;
-  --border-strong:  #cccccc;
+  /* ── Borders ─────────────────────────────────────────────*/
+  --border-subtle:  #eaecef;
+  --border-default: #d8dde4;
+  --border-strong:  #bec5ce;
 
-  /* Text */
-  --text-primary:   #111111;
-  --text-secondary: #444444;
-  --text-muted:     #777777;
-  --text-faint:     #aaaaaa;
-  --text-ghost:     #cccccc;
+  /* ── Text ────────────────────────────────────────────────*/
+  --text-primary:   #0f1923;
+  --text-secondary: #2e3f52;
+  --text-muted:     #5c7080;
+  --text-faint:     #8fa0b0;
+  --text-ghost:     #c0cad4;
 
-  /* Accent */
-  --accent:         #008844;
-  --accent-dim:     rgba(0, 136, 68, 0.08);
-  --accent-border:  rgba(0, 136, 68, 0.25);
-  --accent-glow:    rgba(0, 136, 68, 0.03);
+  /* ── Accent ──────────────────────────────────────────────*/
+  --accent:         #00a85e;
+  --accent-dim:     rgba(0, 168, 94, 0.09);
+  --accent-border:  rgba(0, 168, 94, 0.28);
+  --accent-glow:    rgba(0, 168, 94, 0.04);
 
-  /* Status */
-  --danger:         #cc2222;
-  --danger-dim:     rgba(204, 34, 34, 0.05);
-  --danger-border:  rgba(204, 34, 34, 0.2);
+  /* ── Status ──────────────────────────────────────────────*/
+  --danger:         #d63b3b;
+  --danger-dim:     rgba(214, 59, 59, 0.07);
+  --danger-border:  rgba(214, 59, 59, 0.25);
 
-  --warn:           #cc7700;
-  --warn-dim:       rgba(204, 119, 0, 0.06);
+  --warn:           #c47d00;
+  --warn-dim:       rgba(196, 125, 0, 0.08);
 
-  --info:           #2255cc;
+  --info:           #2b6fd4;
 
-  /* Severity */
-  --severity-critical: #cc2222;
-  --severity-high:     #cc5500;
-  --severity-medium:   #cc7700;
-  --severity-low:      #558800;
-  --severity-info:     #2255cc;
+  /* ── Severity ────────────────────────────────────────────*/
+  --severity-critical: #d63b3b;
+  --severity-high:     #c05a10;
+  --severity-medium:   #c47d00;
+  --severity-low:      #4e8f1e;
+  --severity-info:     #2b6fd4;
 
-  /* Visual effects */
-  --grid-line: rgba(0, 136, 68, 0.04);
-  --card-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.04);
+  /* ── Effects ─────────────────────────────────────────────*/
+  --grid-line:   rgba(0, 0, 0, 0.03);
+  --card-shadow: 0 1px 4px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.05);
 
-  /* ── ScanForm Additions ───────────────────────────── */
-
-  --bg-deep:        #e8e8e3;
-  --bg-raised:      #fcfcf9;
-
-  --bg-choice:      #f5f5f1;
-  --bg-choice-on:   #ffffff;
-
-  --border-choice:     #ddddd5;
-  --border-choice-on:  #c0c0b5;
-
-  --accent-soft:    rgba(0, 136, 68, 0.05);
-  --accent-pulse:   rgba(0, 136, 68, 0.12);
-
-  --tool-stripe:    2px;
+  /* ── ScanForm specific ───────────────────────────────────*/
+  --bg-deep:           #e4e8ed;
+  --bg-raised:         #ffffff;
+  --bg-choice:         #f3f6f9;
+  --bg-choice-on:      #ffffff;
+  --border-choice:     #d8dde4;
+  --border-choice-on:  #bec5ce;
+  --accent-soft:       rgba(0, 168, 94, 0.05);
+  --accent-pulse:      rgba(0, 168, 94, 0.12);
+  --tool-stripe:       2px;
 }
 
-/* ────────────────────────────────────────────────────────── */
-/* Apply base background globally */
-/* ────────────────────────────────────────────────────────── */
+/* ═══════════════════════════════════════════════════════════ */
+/* Base reset                                                  */
+/* ═══════════════════════════════════════════════════════════ */
 
 html, body {
   background-color: var(--bg-base);

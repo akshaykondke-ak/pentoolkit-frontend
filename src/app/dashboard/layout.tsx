@@ -30,32 +30,3 @@ export default function DashboardLayout({
 }
 
 
-
-
-// import ProtectedRoute from '@/components/layout/ProtectedRoute';
-// import Sidebar from '@/components/layout/Sidebar';
-// import TopNav from '@/components/layout/TopNav';
-
-// export default function DashboardLayout({
-//   children,
-// }: {
-//   children: React.ReactNode;
-// }) {
-//   return (
-//     <ProtectedRoute>
-//       <div className="flex h-screen bg-gray-50">
-//         {/* Sidebar */}
-//         <Sidebar />
-
-//         {/* Main Content */}
-//         <div className="flex-1 overflow-auto">
-//           {/* Top Navigation */}
-//           <TopNav />
-
-//           {/* Page Content */}
-//           {children}
-//         </div>
-//       </div>
-//     </ProtectedRoute>
-//   );
-// }
