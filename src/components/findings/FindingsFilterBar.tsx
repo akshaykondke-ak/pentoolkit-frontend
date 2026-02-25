@@ -1,4 +1,5 @@
 // src/components/findings/FindingsFilterBar.tsx
+// src/components/findings/FindingsFilterBar.tsx
 'use client';
 import React, { useState } from 'react';
 
@@ -66,12 +67,9 @@ export default function FindingsFilterBar({ onFilter, onClear }: Props) {
             onChange={e => setSearch(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && handleApply()}
             className="w-full pl-7 pr-3 py-2 text-xs"
-            style={{
-              ...selectStyle,
-              // placeholder handled via CSS — we'll override via inline
-            }}
-            onFocus={e  => (e.currentTarget.style.borderColor = 'var(--accent-border)')}
-            onBlur={e   => (e.currentTarget.style.borderColor = 'var(--border-default)')}
+            style={selectStyle}
+            onFocus={e => (e.currentTarget.style.borderColor = 'var(--accent-border)')}
+            onBlur={e  => (e.currentTarget.style.borderColor = 'var(--border-default)')}
           />
         </div>
       </div>
@@ -86,8 +84,8 @@ export default function FindingsFilterBar({ onFilter, onClear }: Props) {
           onChange={e => setSeverity(e.target.value)}
           className="w-full px-3 py-2 text-xs"
           style={selectStyle}
-          onFocus={e  => (e.currentTarget.style.borderColor = 'var(--accent-border)')}
-          onBlur={e   => (e.currentTarget.style.borderColor = 'var(--border-default)')}
+          onFocus={e => (e.currentTarget.style.borderColor = 'var(--accent-border)')}
+          onBlur={e  => (e.currentTarget.style.borderColor = 'var(--border-default)')}
         >
           <option value="">All Severities</option>
           <option value="critical">Critical</option>
@@ -98,8 +96,8 @@ export default function FindingsFilterBar({ onFilter, onClear }: Props) {
         </select>
       </div>
 
-      {/* Status */}
-      <div className="w-36">
+      {/* Status — ✅ FIXED: values match backend exactly */}
+      <div className="w-40">
         <label className="block text-xs uppercase tracking-wider mb-1.5" style={{ color: 'var(--text-faint)' }}>
           Status
         </label>
@@ -108,14 +106,14 @@ export default function FindingsFilterBar({ onFilter, onClear }: Props) {
           onChange={e => setStatus(e.target.value)}
           className="w-full px-3 py-2 text-xs"
           style={selectStyle}
-          onFocus={e  => (e.currentTarget.style.borderColor = 'var(--accent-border)')}
-          onBlur={e   => (e.currentTarget.style.borderColor = 'var(--border-default)')}
+          onFocus={e => (e.currentTarget.style.borderColor = 'var(--accent-border)')}
+          onBlur={e  => (e.currentTarget.style.borderColor = 'var(--border-default)')}
         >
           <option value="">All Statuses</option>
           <option value="open">Open</option>
-          <option value="confirmed">Confirmed</option>
+          <option value="fixed">Fixed</option>
+          <option value="accepted_risk">Accepted Risk</option>
           <option value="false_positive">False Positive</option>
-          <option value="resolved">Resolved</option>
         </select>
       </div>
 
