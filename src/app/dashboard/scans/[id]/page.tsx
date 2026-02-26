@@ -31,6 +31,7 @@ interface ScanDetail {
   duration_seconds?: number;
   progress?: any;
   error?: string | null;
+  tool_errors?: string[] | null;
   report_path?: string | null;
 }
 
@@ -116,8 +117,12 @@ export default function ScanDetailPage() {
     try {
       await apiClient.post(`/api/v1/scans/${scanId}/cancel`);
       fetchScan();
-    } catch { /* silent */ }
-    setCancelling(false);
+    } catch (err: any) {
+      const msg = err?.response?.data?.detail || 'Failed to cancel scan. Please try again.';
+      setReportError(msg); // reuse existing error state — same display location
+    } finally {
+      setCancelling(false);
+    }
   };
 
   // ── Open HTML report in a new tab ─────────────────────────────────────────
@@ -361,6 +366,39 @@ export default function ScanDetailPage() {
           >
             <span>{reportError}</span>
             <button onClick={() => setReportError(null)} className="ml-3 opacity-60 hover:opacity-100">✕</button>
+          </div>
+        )}
+                {/* Scan error message — shown when scan failed or had tool errors */}
+        {(currentStatus === 'failed' || currentStatus === 'cancelled') && scan.error && (
+          <div
+            className="mb-4 px-4 py-3 rounded-sm text-xs"
+            style={{
+              backgroundColor: 'var(--danger-dim)',
+              border: '1px solid var(--danger-border)',
+              color: 'var(--danger)',
+            }}
+          >
+            <p className="font-bold mb-1">Scan failed</p>
+            <p style={{ color: 'var(--text-secondary)' }}>{scan.error}</p>
+          </div>
+        )}
+
+        {/* Tool-level errors — shown even on completed scans if some tools failed */}
+        {scan.tool_errors && scan.tool_errors.length > 0 && (
+          <div
+            className="mb-4 px-4 py-3 rounded-sm text-xs"
+            style={{
+              backgroundColor: 'rgba(255,136,0,0.06)',
+              border: '1px solid rgba(255,136,0,0.2)',
+              color: 'var(--warn)',
+            }}
+          >
+            <p className="font-bold mb-2">Some tools had errors</p>
+            <ul className="space-y-1">
+              {scan.tool_errors.map((err, i) => (
+                <li key={i} style={{ color: 'var(--text-secondary)' }}>• {err}</li>
+              ))}
+            </ul>
           </div>
         )}
 
