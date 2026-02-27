@@ -1,0 +1,105 @@
+pentoolkit-frontend
+├── docs
+│   ├── complete-project-doc.md
+│   ├── session 3.txt
+│   └── session-04.md
+├── public
+│   ├── file.svg
+│   ├── globe.svg
+│   ├── next.svg
+│   ├── vercel.svg
+│   └── window.svg
+├── src
+│   ├── app
+│   │   ├── auth
+│   │   │   ├── login
+│   │   │   ├── register
+│   │   │   ├── verify-email
+│   │   │   └── layout.tsx
+│   │   ├── dashboard
+│   │   │   ├── admin
+│   │   │   ├── findings
+│   │   │   ├── profile
+│   │   │   ├── reports
+│   │   │   ├── scans
+│   │   │   ├── scheduled-scans
+│   │   │   ├── settings
+│   │   │   ├── layout.tsx
+│   │   │   └── page.tsx
+│   │   ├── favicon.ico
+│   │   ├── globals.css
+│   │   ├── layout.tsx
+│   │   └── page.tsx
+│   ├── components
+│   │   ├── auth
+│   │   │   ├── LoginForm.tsx
+│   │   │   ├── RegisterForm.tsx
+│   │   │   └── VerifyEmailForm.tsx
+│   │   ├── common
+│   │   ├── dashboard
+│   │   │   └── StatCard.tsx
+│   │   ├── findings
+│   │   │   ├── FindingDetailModal.tsx
+│   │   │   ├── FindingSeverityBadge.tsx
+│   │   │   ├── FindingStatusBadge.tsx
+│   │   │   ├── FindingsFilterBar.tsx
+│   │   │   └── FindingsList.tsx
+│   │   ├── layout
+│   │   │   ├── ProtectedRoute.tsx
+│   │   │   ├── Sidebar.tsx
+│   │   │   └── TopNav.tsx
+│   │   ├── scans
+│   │   │   ├── ScanForm.tsx
+│   │   │   ├── ScanProgressCard.tsx
+│   │   │   ├── ScanStatusBadge.tsx
+│   │   │   └── ScansList.tsx
+│   │   ├── scheduled-scans
+│   │   │   ├── CronPreview.tsx
+│   │   │   ├── ScheduledScanForm.tsx
+│   │   │   └── ScheduledScansList.tsx
+│   │   ├── settings
+│   │   │   ├── NotificationSettings.tsx
+│   │   │   ├── SettingsPage copy.tsx
+│   │   │   └── SettingsPage.tsx
+│   │   └── ui
+│   │       └── ThemeToggle.tsx
+│   ├── lib
+│   │   ├── api
+│   │   │   ├── admin.ts
+│   │   │   ├── auth.ts
+│   │   │   ├── client.ts
+│   │   │   ├── dashboard.ts
+│   │   │   ├── findings.ts
+│   │   │   ├── reports.ts
+│   │   │   └── scans.ts
+│   │   ├── config
+│   │   │   └── tools.ts
+│   │   ├── hooks
+│   │   │   ├── useAdminUsers.ts
+│   │   │   ├── useAuth.ts
+│   │   │   ├── useFindings.ts
+│   │   │   ├── useScanPolling.ts
+│   │   │   └── useScans.ts
+│   │   ├── services
+│   │   ├── store
+│   │   │   ├── authStore.ts
+│   │   │   └── sideBarStore.ts
+│   │   ├── theme
+│   │   │   └── ThemeProvider.tsx
+│   │   ├── types
+│   │   └── utils
+│   └── styles
+│       ├── themes copy.css
+│       └── themes.css
+├── .env.local
+├── .gitignore
+├── README.md
+├── eslint.config.mjs
+├── next-env.d.ts
+├── next.config.ts
+├── package-lock.json
+├── package.json
+├── postcss.config.mjs
+└── tsconfig.json
+
+37 directories, 66 files

@@ -37,4 +37,15 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 
 all good
 
-!!!!!!!!!!!!!!!b
+tree pentoolkit-frontend \
+  -I "node_modules|.next|dist|build|coverage|.git|.cache" \
+  -a \
+  > frontend-folder.txt
+
+
+  tree pentoolkit-frontend \
+  -I "node_modules|.next|dist|build|coverage|.git|.cache|*.log|*.lock" \
+  -L 4 \
+  -a \
+  --dirsfirst \
+  > frontend-folder.txt

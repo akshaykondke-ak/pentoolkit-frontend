@@ -301,6 +301,15 @@ export const TOOLS: ToolDefinition[] = [
     fields:       [],
   },
 
+  {
+    id:           'headers',
+    label:        'Headers',
+    desc:         'HTTP security headers analysis & grading (A-F)',
+    color:        '#7c3aed',
+    configurable: false,
+    fields:       [],
+  },
+
 
 
   // ════════════════════════════════════════════════════════════════════════
