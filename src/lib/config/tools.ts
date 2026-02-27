@@ -280,6 +280,29 @@ export const TOOLS: ToolDefinition[] = [
     ],
   },
 
+  // ── WAF Detector ────────────────────────────────────────────────────────
+  {
+    id:           'waf',
+    label:        'WAF Detector',
+    desc:         'Web Application Firewall detection via wafw00f',
+    color:        '#ea580c',
+    configurable: false,
+    fields:       [],
+  },
+
+
+  // ── DMARC Checker ───────────────────────────────────────────────────────
+  {
+    id:           'dmarc',
+    label:        'DMARC Checker',
+    desc:         'Email security: DMARC, SPF, DKIM & MX record analysis',
+    color:        '#0284c7',
+    configurable: false,
+    fields:       [],
+  },
+
+
+
   // ════════════════════════════════════════════════════════════════════════
   // FUTURE TOOL TEMPLATE — copy this block when adding a new tool
   // ════════════════════════════════════════════════════════════════════════
